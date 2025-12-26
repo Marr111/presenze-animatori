@@ -2,38 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Opzionale: aggiunge un font più moderno e pulito a tutta la pagina */
 body {
-  @apply bg-gradient-to-br from-indigo-600 to-blue-500;
+  @apply antialiased text-gray-900;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-h1 {
-  @apply text-2xl font-semibold mb-4;
+/* Stili per rendere i grafici di Recharts responsivi e ben centrati */
+.recharts-responsive-container {
+  margin: 0 auto;
 }
 
-h2 {
-  @apply font-semibold mb-2;
-}
-
-table {
-  @apply min-w-full border-separate border-spacing-2;
-}
-
-th {
-  @apply text-left px-4 py-2 border;
-}
-
-td {
-  @apply text-center border px-2 py-2;
-}
-
+/* Rende le transizioni dei pulsanti più fluide */
 button {
-  @apply px-4 py-2 rounded-xl transition-all;
-}
-
-.bg-white {
-  @apply bg-white shadow-lg rounded-lg;
-}
-
-.cell-button {
-  @apply w-full h-12 rounded-lg shadow-sm flex items-center justify-center transition;
+  @apply transition-all duration-200;
 }
