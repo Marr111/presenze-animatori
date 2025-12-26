@@ -1,4 +1,4 @@
-import 'index.css';
+import './ndex.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, X, Calendar, Users, LogOut, Eye, Search,
