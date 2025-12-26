@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { Check, X, Calendar, Users, LogOut, Eye, BarChart3, PieChart } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart as RePieChart, Pie, Cell } from 'recharts';
 
@@ -180,7 +181,9 @@ const AvailabilityTracker = () => {
   // Schermata di Login
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <>
+        <Analytics />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
@@ -229,6 +232,7 @@ const AvailabilityTracker = () => {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
@@ -240,7 +244,9 @@ const AvailabilityTracker = () => {
     const { barData, lineData, pieData } = getChartData();
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+      <>
+        <Analytics />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -492,12 +498,15 @@ const AvailabilityTracker = () => {
           )}
         </div>
       </div>
+    </>
     );
   }
 
   // User View (Non-Test)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
+    <>
+      <Analytics />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -587,6 +596,7 @@ const AvailabilityTracker = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 
