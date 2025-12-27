@@ -143,7 +143,7 @@ const App = () => {
           onClick={() => setCurrentUser('Admin')}
           className="mt-8 flex items-center gap-2 text-slate-300 hover:text-indigo-400 transition-colors text-sm font-bold"
         >
-          <Shield size={16} /> Area Riservata
+          <Shield size={20} /> Grafici tabelle infografiche
         </button>
       </div>
     );
