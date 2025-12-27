@@ -239,7 +239,7 @@ const App = () => {
                   <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-2">
                     <BarChart3 className="text-indigo-500 w-5 h-5" /> Copertura Giornaliera
                   </h3>
-                  <ResponsiveContainer width="100%" height="90%">
+                  <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={DATES.map(d => ({ name: d, count: TIME_SLOTS.reduce((a, s) => a + countTotal(d, s), 0) }))}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 700}} />
@@ -256,7 +256,7 @@ const App = () => {
                   <h3 className="text-lg font-black text-slate-800 mb-8 flex items-center gap-2">
                     <PieChart className="text-indigo-500 w-5 h-5" /> Mix Orario
                   </h3>
-                  <ResponsiveContainer width="100%" height="90%">
+                  <ResponsiveContainer width="100%" height="100%">
                     <RePieChart>
                       <Pie 
                         data={TIME_SLOTS.map(s => ({ name: s, value: DATES.reduce((a, d) => a + countTotal(d, s), 0) }))} 

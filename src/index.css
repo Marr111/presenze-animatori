@@ -2,18 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Opzionale: aggiunge un font più moderno e pulito a tutta la pagina */
-body {
-  @apply antialiased text-gray-900;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+@layer base {
+  body {
+    @apply antialiased bg-slate-50;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  }
 }
 
-/* Stili per rendere i grafici di Recharts responsivi e ben centrati */
+/* Assicura che Recharts abbia lo spazio necessario */
 .recharts-responsive-container {
-  margin: 0 auto;
-}
-
-/* Rende le transizioni dei pulsanti più fluide */
-button {
-  @apply transition-all duration-200;
+  min-height: 0;
+  min-width: 0;
 }

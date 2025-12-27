@@ -1,18 +1,63 @@
-/* Aggiungi questo per il contenitore principale */
+/* Reset e base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 #root {
   width: 100%;
   min-height: 100vh;
 }
 
-/* Contenitore del grafico */
+/* Fix per i grafici Recharts */
 .recharts-wrapper {
   width: 100% !important;
-  height: 400px !important; /* O l'altezza che preferisci */
+  height: 100% !important;
 }
 
-/* Se hai un div che contiene il grafico */
-.chart-container {
-  width: 100%;
-  height: 400px;
-  min-height: 400px;
+.recharts-surface {
+  overflow: visible;
+}
+
+/* Scrollbar personalizzata */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Animazioni */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoom-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.zoom-in {
+  animation: zoom-in 0.3s ease-out;
 }
