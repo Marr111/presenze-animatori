@@ -72,7 +72,7 @@ const App = () => {
   };
 
   const toggleAvailability = async (date, slot) => {
-    if (!currentUser || currentUser === 'Test' || isLoading) return;
+    if (!currentUser || currentUser === ' Test' || isLoading) return;
     const current = availabilities[currentUser]?.[date]?.[slot];
     const newValue = current === true ? null : true;
     const updated = {
@@ -89,7 +89,7 @@ const App = () => {
   };
 
   const countTotal = (date, slot) => 
-    PEOPLE.filter(p => p !== 'Test' && availabilities[p]?.[date]?.[slot] === true).length;
+    PEOPLE.filter(p => p !== ' Test' && availabilities[p]?.[date]?.[slot] === true).length;
 
   const filteredPeople = useMemo(() => 
     PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -138,7 +138,7 @@ const App = () => {
     );
   }
 
-  const isTest = currentUser === 'Test';
+  const isTest = currentUser === ' Test';
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
