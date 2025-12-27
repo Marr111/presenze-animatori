@@ -3,8 +3,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, Calendar, Users, LogOut, Search, Printer, Shield,
   Activity, Clock, ChevronRight, CheckCircle2, 
-  UserCheck, Lightbulb, Send, Trash2
+  UserCheck, Lightbulb, Send, Trash2, BarChart3, PieChart as PieIcon, TrendingUp
 } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
+  RadarChart, PolarGrid, PolarAngleAxis, Radar, Line
+} from 'recharts';
 
 // --- CONFIGURAZIONE COSTANTI ---
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
@@ -14,6 +19,8 @@ const PEOPLE = [
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
   'Gloria Romano', 'Vittoria Pelassa'
 ].sort();
+
+const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4'];
 
 const ALL_PERIODS = DATES.flatMap(d => TIME_SLOTS.map(s => ({ date: d, slot: s })));
 
@@ -27,6 +34,7 @@ const App = () => {
   const [testView, setTestView] = useState('summary'); 
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- CARICAMENTO DATI ---
   useEffect(() => {
     const loadData = async () => {
       if (isLoading) return;
@@ -92,15 +100,50 @@ const App = () => {
   const countTotal = (date, slot) => PEOPLE.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const filteredPeople = useMemo(() => PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
   
-  // --- FUNZIONE CORRETTA: Prende solo le lettere, ignorando i numeri ---
   const getInitials = (name) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .filter(char => /[a-zA-Z]/.test(char)) // Mantiene solo caratteri alfabetici
-      .join('')
-      .toUpperCase();
+    return name.split(' ').map(n => n[0]).filter(char => /[a-zA-Z]/.test(char)).join('').toUpperCase();
   };
+
+  // --- LOGICA GRAFICI ---
+  const getChartData = () => {
+    // 1. Affluenza Temporale (AreaChart)
+    const timelineData = ALL_PERIODS.map(p => ({
+      name: `${p.date.split(' ')[1]} ${p.slot[0]}.`,
+      full: `${p.date} - ${p.slot}`,
+      persone: countTotal(p.date, p.slot)
+    }));
+
+    // 2. Distribuzione Pasti (PieChart)
+    const mealData = [
+      { name: 'Pranzi Totali', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo'), 0) },
+      { name: 'Cene Totali', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Cena'), 0) }
+    ];
+
+    // 3. Impegno per Persona (BarChart)
+    const commitmentData = PEOPLE.map(p => {
+      let count = 0;
+      DATES.forEach(d => TIME_SLOTS.forEach(s => {
+        if (availabilities[p]?.[d]?.[s]) count++;
+      }));
+      return { name: p.split(' ')[0], impegni: count };
+    });
+
+    // 4. Copertura Fasce Orarie (RadarChart)
+    const slotCoverage = TIME_SLOTS.map(s => ({
+      slot: s,
+      media: parseFloat((DATES.reduce((acc, d) => acc + countTotal(d, s), 0) / DATES.length).toFixed(1))
+    }));
+
+    // 5. Statistiche Idee (PieChart)
+    const ideaStats = PEOPLE.map(p => ({
+      name: p.split(' ')[0],
+      contributi: ideas.filter(i => i.author === p).length
+    })).filter(d => d.contributi > 0);
+
+    return { timelineData, mealData, commitmentData, slotCoverage, ideaStats };
+  };
+
+  const charts = getChartData();
 
   if (!currentUser) {
     return (
@@ -110,11 +153,10 @@ const App = () => {
               <Users size={28} />
            </div>
            <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">Triduo pasquale 2026</h1>
-           <p className="text-slate-500 font-medium">ciaooo</p>
+           <p className="text-slate-500 font-medium italic">Gestione disponibilità staff</p>
         </div>
 
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          
           <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 p-6 flex flex-col h-[550px]">
             <div className="flex items-center gap-3 mb-6">
                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Search size={20} /></div>
@@ -130,7 +172,6 @@ const App = () => {
                   <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs group-hover:bg-indigo-600 group-hover:text-white">
                     {getInitials(p)}
                   </div>
-                  {/* RIMOSSO OGNI RIFERIMENTO A RUOLI QUI */}
                   <span className="font-bold text-slate-700 text-sm">{p}</span>
                   <ChevronRight className="ml-auto w-4 h-4 text-slate-300 group-hover:text-indigo-500" />
                 </button>
@@ -189,18 +230,117 @@ const App = () => {
 
       <main className="max-w-6xl mx-auto p-4 sm:p-8">
         {isAdmin ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="flex justify-between items-center no-print">
-              <div className="inline-flex bg-slate-200/50 p-1.5 rounded-2xl">
-                {['summary', 'caranzano', 'matrix'].map(v => (
-                  <button key={v} onClick={() => setTestView(v)} className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
-                    {v === 'summary' ? 'Tabella' : v === 'caranzano' ? 'Pasti' : 'Matrice'}
+              <div className="inline-flex bg-slate-200/50 p-1.5 rounded-2xl flex-wrap gap-1">
+                {['summary', 'caranzano', 'matrix', 'charts'].map(v => (
+                  <button key={v} onClick={() => setTestView(v)} className={`px-4 md:px-6 py-2.5 rounded-xl text-xs font-black transition-all uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                    {v === 'summary' ? 'Tabella' : v === 'caranzano' ? 'Pasti' : v === 'matrix' ? 'Foglio completo' : 'Grafici'}
                   </button>
                 ))}
               </div>
               <button onClick={() => window.print()} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100"><Printer size={20} /> Stampa</button>
             </div>
-            {testView === 'matrix' ? (
+
+            {testView === 'charts' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in duration-500">
+                {/* 1. Affluenza Temporale */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><TrendingUp size={20} className="text-indigo-500" /> Affluenza nel tempo</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={charts.timelineData}>
+                      <defs>
+                        <linearGradient id="colorPersone" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 600, fill: '#94a3b8'}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#94a3b8'}} />
+                      <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                      <Area type="monotone" dataKey="persone" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorPersone)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 2. Distribuzione Pasti */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Utensils size={20} className="text-rose-500" /> Carico Cucina Totale</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={charts.mealData} innerRadius={70} outerRadius={100} paddingAngle={5} dataKey="value">
+                        {charts.mealData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 3. Impegno per Persona */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Users size={20} className="text-emerald-500" /> Slot coperti per persona</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={charts.commitmentData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700, fill: '#64748b'}} width={80} />
+                      <Tooltip cursor={{fill: 'transparent'}} />
+                      <Bar dataKey="impegni" fill="#10b981" radius={[0, 10, 10, 0]} barSize={20} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 4. Copertura Radar */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Activity size={20} className="text-amber-500" /> Copertura Media Fasce</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={charts.slotCoverage}>
+                      <PolarGrid stroke="#f1f5f9" />
+                      <PolarAngleAxis dataKey="slot" tick={{fontSize: 10, fontWeight: 600}} />
+                      <Radar name="Media Persone" dataKey="media" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.5} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 5. Contributo Idee */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><Lightbulb size={20} className="text-purple-500" /> Contributi Idee</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={charts.ideaStats} cx="50%" cy="50%" labelLine={false} label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={80} fill="#8884d8" dataKey="contributi">
+                        {charts.ideaStats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* 6. Heatmap Semplificata (BarChart Composta) */}
+                <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col h-[400px]">
+                  <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2"><BarChart3 size={20} className="text-cyan-500" /> Picchi di affluenza</h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={charts.timelineData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{fontSize: 9}} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="persone" fill="#06b6d4">
+                        {charts.timelineData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.persone > 7 ? '#ef4444' : entry.persone > 4 ? '#06b6d4' : '#94a3b8'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ) : testView === 'matrix' ? (
               <div className="bg-white rounded-[2rem] border border-slate-100 shadow-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-slate-50"><th className="p-3 text-left border-r sticky left-0 bg-white">Persona</th>{ALL_PERIODS.map((p,i)=>(<th key={i} className={`p-2 text-center text-[10px] min-w-[60px] border-b ${p.slot==='Mattino'?'border-l-2':''}`}><div className="font-bold">{p.date.split(' ')[1]}</div><div className="text-slate-400">{p.slot}</div></th>))}</tr></thead>
@@ -231,18 +371,19 @@ const App = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          /* VISTA UTENTE */
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <div className="px-2"><h2 className="text-3xl font-black text-slate-800">Le tue disponibilità</h2><p className="text-slate-500 font-medium italic">Seleziona quando sarai presente</p></div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {DATES.map(d => (
-                <div key={d} className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm space-y-4">
+                <div key={d} className="bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm space-y-4 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3 border-b pb-4"><Calendar className="text-indigo-600" /><span className="text-xl font-black">{d}</span></div>
                   <div className="grid grid-cols-2 gap-3">
                     {TIME_SLOTS.map(s => {
                       const val = availabilities[currentUser]?.[d]?.[s];
                       return (
-                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`h-20 rounded-2xl flex flex-col items-center justify-center border-2 ${val === true ? 'bg-emerald-500 border-emerald-400 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
-                          {val === true ? <Check size={20} /> : <Clock size={16} className="opacity-20" />}
+                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`h-20 rounded-2xl flex flex-col items-center justify-center border-2 transition-all ${val === true ? 'bg-emerald-500 border-emerald-400 text-white scale-105' : 'bg-slate-50 border-slate-100 text-slate-400 hover:border-indigo-200'}`}>
+                          {val === true ? <Check size={20} className="animate-in zoom-in" /> : <Clock size={16} className="opacity-20" />}
                           <span className="text-[10px] font-black uppercase">{s}</span>
                         </button>
                       );
@@ -252,7 +393,7 @@ const App = () => {
               ))}
             </div>
             <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t flex justify-center z-50">
-              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="max-w-md w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3">
+              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="max-w-md w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-2xl hover:bg-black transition-colors">
                 <CheckCircle2 className="text-emerald-400" /> SALVA ED ESCI
               </button>
             </div>
