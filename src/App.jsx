@@ -14,9 +14,9 @@ import {
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const PEOPLE = [
-  'Mario Rossi', 'Luigi Bianchi', 'Anna Verdi', 'Paolo Neri',
-  'Giulia Romano', 'Marco Ferrari', 'Sara Colombo', 'Andrea Ricci',
-  'Francesca Marino', 'Roberto Greco', 'Test'
+  'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
+  'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
+  'Gloria Romano', 'Vittoria Pelassa', ' Test'
 ].sort();
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'];
@@ -72,7 +72,7 @@ const App = () => {
   };
 
   const toggleAvailability = async (date, slot) => {
-    if (!currentUser || currentUser === 'Test' || isLoading) return;
+    if (!currentUser || currentUser === ' Test' || isLoading) return;
     const current = availabilities[currentUser]?.[date]?.[slot];
     const newValue = current === true ? null : true;
     const updated = {
@@ -89,7 +89,7 @@ const App = () => {
   };
 
   const countTotal = (date, slot) => 
-    PEOPLE.filter(p => p !== 'Test' && availabilities[p]?.[date]?.[slot] === true).length;
+    PEOPLE.filter(p => p !== ' Test' && availabilities[p]?.[date]?.[slot] === true).length;
 
   const filteredPeople = useMemo(() => 
     PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())),
@@ -138,7 +138,7 @@ const App = () => {
     );
   }
 
-  const isTest = currentUser === 'Test';
+  const isTest = currentUser === ' Test';
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
