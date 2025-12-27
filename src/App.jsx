@@ -1,13 +1,13 @@
 import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
-// Importazione icone: AGGIUNTO 'Utensils' per evitare l'errore in console
+// Importazione icone corrette e complete
 import { 
   Check, Calendar, Users, LogOut, Search, Printer, Shield,
   Activity, Clock, ChevronRight, CheckCircle2, 
   UserCheck, Lightbulb, Send, Trash2, BarChart3, PieChart as PieIcon, TrendingUp, Utensils
 } from 'lucide-react';
 
-// Importazione componenti Recharts per i grafici
+// Importazione componenti Recharts
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
@@ -23,10 +23,7 @@ const PEOPLE = [
   'Gloria Romano', 'Vittoria Pelassa'
 ].sort();
 
-// Colori per i grafici
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4'];
-
-// Lista piatta di tutti i turni (Data + Slot) per calcoli e matrice
 const ALL_PERIODS = DATES.flatMap(d => TIME_SLOTS.map(s => ({ date: d, slot: s })));
 
 const App = () => {
@@ -40,7 +37,7 @@ const App = () => {
   const [testView, setTestView] = useState('summary'); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- CARICAMENTO DATI (DB SIMULATO) ---
+  // --- CARICAMENTO DATI ---
   useEffect(() => {
     const loadData = async () => {
       if (isLoading) return;
@@ -65,15 +62,13 @@ const App = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // --- SALVATAGGIO ---
   const saveData = async (key, newData) => {
     try {
       if (window.storage) await window.storage.set(key, JSON.stringify(newData), true);
       else localStorage.setItem(key, JSON.stringify(newData));
-    } catch (e) { console.error("Errore salvataggio:", e); }
+    } catch (e) { console.error("Errore:", e); }
   };
 
-  // --- LOGICA IDEE ---
   const addIdea = async () => {
     if (!newIdea.trim()) return;
     const updatedIdeas = [...ideas, { id: Date.now(), text: newIdea, author: currentUser || 'Anonimo' }];
@@ -88,7 +83,6 @@ const App = () => {
     await saveData('triduo_ideas', updatedIdeas);
   };
 
-  // --- LOGICA DISPONIBILITÀ ---
   const toggleAvailability = async (date, slot) => {
     if (!currentUser || currentUser === 'Admin' || isLoading) return;
     const current = availabilities[currentUser]?.[date]?.[slot];
@@ -103,58 +97,57 @@ const App = () => {
     setTimeout(() => setShowSuccess(false), 2000);
   };
 
-  // --- UTILITY ---
   const countTotal = (date, slot) => PEOPLE.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const filteredPeople = useMemo(() => PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
-  
-  // Iniziali pulite (No numeri, es: Lorenzo 04 -> LT)
   const getInitials = (name) => name.split(' ').map(n => n[0]).filter(char => /[a-zA-Z]/.test(char)).join('').toUpperCase();
 
-  // --- DATI PER I 7 GRAFICI ---
-  const charts = useMemo(() => {
-    const timelineData = ALL_PERIODS.map(p => ({
+  // --- PREPARAZIONE DATI GRAFICI ---
+  const chartsData = useMemo(() => {
+    const timeline = ALL_PERIODS.map(p => ({
       name: `${p.date.split(' ')[1]} ${p.slot[0]}.`,
       persone: countTotal(p.date, p.slot)
     }));
 
-    const mealData = [
+    const meals = [
       { name: 'Pranzi', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo'), 0) },
       { name: 'Cene', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Cena'), 0) }
     ];
 
-    const commitmentData = PEOPLE.map(p => {
+    const topStaff = PEOPLE.map(p => {
       let count = 0;
       DATES.forEach(d => TIME_SLOTS.forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
       return { name: p.split(' ')[0], impegni: count };
-    });
+    }).sort((a,b) => b.impegni - a.impegni).slice(0, 8);
 
-    const slotCoverage = TIME_SLOTS.map(s => ({
-      slot: s,
-      media: parseFloat((DATES.reduce((acc, d) => acc + countTotal(d, s), 0) / DATES.length).toFixed(1))
+    const coverage = TIME_SLOTS.map(s => ({
+      subject: s,
+      A: DATES.reduce((acc, d) => acc + countTotal(d, s), 0),
+      fullMark: PEOPLE.length
     }));
 
-    const ideaStats = PEOPLE.map(p => ({
+    const engagement = PEOPLE.map(p => ({
       name: p.split(' ')[0],
-      contributi: ideas.filter(i => i.author === p).length
-    })).filter(d => d.contributi > 0);
+      value: ideas.filter(i => i.author === p).length
+    })).filter(d => d.value > 0);
 
-    return { timelineData, mealData, commitmentData, slotCoverage, ideaStats };
+    return { timeline, meals, topStaff, coverage, engagement };
   }, [availabilities, ideas]);
 
-  // --- VISTA LOGIN & IDEE ---
+  // --- LOGIN & IDEE ---
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex flex-col items-center justify-center">
         <div className="text-center space-y-2 mb-10">
            <div className="inline-flex p-3 bg-indigo-600 rounded-2xl shadow-lg text-white"><Users size={28} /></div>
-           <h1 className="text-4xl font-black text-slate-800 tracking-tight">Triduo 2026</h1>
-           <p className="text-slate-500 font-medium">Gestione Staff</p>
+           <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none text-center">Triduo pasquale 2026</h1>
+           <p className="text-slate-500 font-medium italic">ciaooo</p>
         </div>
 
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+          {/* Sezione Nomi */}
           <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-6 flex flex-col h-[550px]">
             <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Search size={20} className="text-indigo-600"/> Accedi</h2>
-            <input type="text" placeholder="Cerca nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-indigo-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Cerca il tuo nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-indigo-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
               {filteredPeople.map(p => (
                 <button key={p} onClick={() => setCurrentUser(p)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all group">
@@ -167,17 +160,18 @@ const App = () => {
             <button onClick={() => setCurrentUser('Admin')} className="mt-4 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 font-bold text-xs"><Shield size={14} /> Pannello Admin</button>
           </div>
 
+          {/* Sezione Idee */}
           <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-6 flex flex-col h-[550px]">
-            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb size={20} className="text-amber-500"/> Idee</h2>
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb size={20} className="text-amber-500"/> Idee Triduo</h2>
             <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="Nuova idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addIdea()} />
-              <button onClick={addIdea} className="p-3 bg-amber-500 text-white rounded-2xl"><Send size={18} /></button>
+              <input type="text" placeholder="Scrivi un'idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addIdea()} />
+              <button onClick={addIdea} className="p-3 bg-amber-500 text-white rounded-2xl hover:bg-amber-600"><Send size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
               {ideas.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-30 text-xs font-bold uppercase tracking-widest">Nessuna idea</div> : 
                 [...ideas].reverse().map(idea => (
                   <div key={idea.id} className="group p-3 bg-slate-50 border rounded-xl hover:border-amber-200">
-                    <p className="text-slate-700 font-bold text-sm">{idea.text}</p>
+                    <p className="text-slate-700 font-bold text-sm leading-tight">{idea.text}</p>
                     <div className="mt-2 flex justify-between items-center text-[9px] font-black uppercase text-slate-400">
                       <span>Da: {idea.author}</span>
                       <button onClick={() => deleteIdea(idea.id)} className="text-slate-300 hover:text-rose-500"><Trash2 size={12} /></button>
@@ -192,11 +186,11 @@ const App = () => {
     );
   }
 
-  // --- VISTA MAIN (USER/ADMIN) ---
+  // --- VISTA MAIN ---
   const isAdmin = currentUser === 'Admin';
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-      <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b px-6 py-4 flex justify-between items-center">
+      <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b px-6 py-4 flex justify-between items-center no-print">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentUser(null)}>
           <Activity className="text-indigo-600" /> <span className="font-black">TRACKER 2026</span>
         </div>
@@ -208,56 +202,103 @@ const App = () => {
 
       <main className="max-w-6xl mx-auto p-4 sm:p-8">
         {isAdmin ? (
-          <div className="space-y-8">
-            <div className="flex flex-wrap gap-2 justify-between items-center">
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-wrap gap-2 justify-between items-center no-print">
               <div className="inline-flex bg-slate-200/50 p-1.5 rounded-2xl">
                 {['summary', 'caranzano', 'matrix', 'charts'].map(v => (
-                  <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>{v}</button>
+                  <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
+                    {v === 'summary' ? 'Tabella' : v === 'caranzano' ? 'Pasti' : v === 'matrix' ? 'Foglio' : 'Grafici'}
+                  </button>
                 ))}
               </div>
               <button onClick={() => window.print()} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2"><Printer size={18} /> Stampa</button>
             </div>
 
             {testView === 'charts' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 1. Timeline */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-indigo-600"><TrendingUp size={16}/> Affluenza nel Tempo</h3>
-                  <ResponsiveContainer><AreaChart data={charts.timelineData}><XAxis dataKey="name" tick={{fontSize: 9}}/><YAxis hide/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122" strokeWidth={3}/></AreaChart></ResponsiveContainer>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-10">
+                {/* 1. Affluenza Timeline */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-indigo-600"><TrendingUp size={16}/> Affluenza per Turno</h3>
+                  <div style={{ width: '100%', height: 250 }}>
+                    <ResponsiveContainer>
+                      <AreaChart data={chartsData.timeline}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tick={{fontSize: 9}} />
+                        <YAxis tick={{fontSize: 10}} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                {/* 2. Cucina */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-rose-600"><Utensils size={16}/> Carico Pasti</h3>
-                  <ResponsiveContainer><PieChart><Pie data={charts.mealData} innerRadius={60} outerRadius={80} dataKey="value" label>{charts.mealData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}</Pie><Tooltip/><Legend/></PieChart></ResponsiveContainer>
+
+                {/* 2. Carico Cucina */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-rose-600"><Utensils size={16}/> Carico Pasti Totale</h3>
+                  <div style={{ width: '100%', height: 250 }}>
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie data={chartsData.meals} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                          {chartsData.meals.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
+                        </Pie>
+                        <Tooltip />
+                        <Legend iconType="circle" wrapperStyle={{fontSize: 12}} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                {/* 3. Impegno individuale */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-emerald-600"><Users size={16}/> Impegno Individuale</h3>
-                  <ResponsiveContainer><BarChart data={charts.commitmentData} layout="vertical"><XAxis type="number" hide/><YAxis dataKey="name" type="category" tick={{fontSize: 10}} width={70}/><Tooltip/><Bar dataKey="impegni" fill="#10b981" radius={[0, 4, 4, 0]}/></BarChart></ResponsiveContainer>
+
+                {/* 3. Impegno Staff */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-emerald-600"><Users size={16}/> Top Staff (Slot Coperti)</h3>
+                  <div style={{ width: '100%', height: 250 }}>
+                    <ResponsiveContainer>
+                      <BarChart data={chartsData.topStaff} layout="vertical">
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" tick={{fontSize: 10}} width={70} />
+                        <Tooltip />
+                        <Bar dataKey="impegni" fill="#10b981" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
-                {/* 4. Radar Fasce Orarie */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-amber-600"><Activity size={16}/> Copertura Fasce</h3>
-                  <ResponsiveContainer><RadarChart data={charts.slotCoverage}><PolarGrid /><PolarAngleAxis dataKey="slot" /><Radar dataKey="media" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.5}/><Tooltip/></RadarChart></ResponsiveContainer>
-                </div>
-                {/* 5. Contributi Idee */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-purple-600"><Lightbulb size={16}/> Coinvolgimento Idee</h3>
-                  <ResponsiveContainer><PieChart><Pie data={charts.ideaStats} dataKey="contributi" outerRadius={80} label>{charts.ideaStats.map((_, i) => <Cell key={i} fill={COLORS[(i+2) % COLORS.length]}/>)}</Pie><Tooltip/></PieChart></ResponsiveContainer>
-                </div>
-                {/* 6. Heatmap Picchi */}
-                <div className="bg-white p-6 rounded-3xl border h-[350px]">
-                  <h3 className="font-black text-sm uppercase mb-4 flex items-center gap-2 text-cyan-600"><BarChart3 size={16}/> Analisi Sotto-Staff</h3>
-                  <ResponsiveContainer><BarChart data={charts.timelineData}><XAxis dataKey="name" tick={{fontSize: 9}}/><YAxis/><Tooltip/><Bar dataKey="persone">{charts.timelineData.map((entry, i) => <Cell key={i} fill={entry.persone < 4 ? '#ef4444' : '#06b6d4'}/>)}</Bar></BarChart></ResponsiveContainer>
+
+                {/* 4. Radar Copertura */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm min-h-[350px]">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-amber-600"><Activity size={16}/> Copertura Fasce Orarie</h3>
+                  <div style={{ width: '100%', height: 250 }}>
+                    <ResponsiveContainer>
+                      <RadarChart data={chartsData.coverage}>
+                        <PolarGrid />
+                        <PolarAngleAxis dataKey="subject" tick={{fontSize: 9}} />
+                        <Radar name="Staff" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6} />
+                        <Tooltip />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
             ) : testView === 'matrix' ? (
               <div className="bg-white rounded-3xl border shadow-xl overflow-x-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-slate-50"><tr><th className="p-3 text-left sticky left-0 bg-white border-r">Persona</th>{ALL_PERIODS.map((p,i)=><th key={i} className="p-2 border-b"><div className="font-bold">{p.date.split(' ')[1]}</div><div>{p.slot[0]}</div></th>)}</tr></thead>
-                  <tbody>{PEOPLE.map(person => <tr key={person} className="border-b"><td className="p-3 font-bold sticky left-0 bg-white border-r">{person}</td>{ALL_PERIODS.map((p,i)=><td key={i} className="text-center">{availabilities[person]?.[p.date]?.[p.slot] && <Check size={14} className="mx-auto text-emerald-500"/>}</td>)}</tr>)}</tbody>
+                  <thead className="bg-slate-50"><tr><th className="p-3 text-left sticky left-0 bg-white border-r">Persona</th>{ALL_PERIODS.map((p,i)=><th key={i} className="p-2 border-b min-w-[50px]"><div className="font-bold">{p.date.split(' ')[1]}</div><div>{p.slot[0]}</div></th>)}</tr></thead>
+                  <tbody>{PEOPLE.map(person => <tr key={person} className="border-b hover:bg-slate-50"><td className="p-3 font-bold sticky left-0 bg-white border-r">{person}</td>{ALL_PERIODS.map((p,i)=><td key={i} className="text-center">{availabilities[person]?.[p.date]?.[p.slot] && <Check size={14} className="mx-auto text-emerald-500"/>}</td>)}</tr>)}</tbody>
                 </table>
               </div>
+            ) : testView === 'caranzano' ? (
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {DATES.map(d => (
+                   <div key={d} className="bg-white rounded-[2rem] p-6 border shadow-sm">
+                     <h3 className="text-xl font-black text-slate-800 border-b pb-4 mb-4">{d}</h3>
+                     {['Pranzo', 'Cena'].map(meal => (
+                       <div key={meal} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mb-2">
+                         <span className="font-bold text-slate-600">{meal}</span>
+                         <span className="text-3xl font-black text-indigo-600">{countTotal(d, meal)}</span>
+                       </div>
+                     ))}
+                   </div>
+                 ))}
+               </div>
             ) : (
               <div className="bg-white rounded-3xl border p-6 overflow-x-auto">
                 <table className="w-full">
@@ -268,7 +309,8 @@ const App = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
+          /* VISTA UTENTE */
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
             <h2 className="text-3xl font-black text-slate-800">Le tue disponibilità</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {DATES.map(d => (
