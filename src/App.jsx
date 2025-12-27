@@ -14,9 +14,9 @@ import {
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const PEOPLE = [
-  'Mario Rossi', 'Luigi Bianchi', 'Anna Verdi', 'Paolo Neri',
-  'Giulia Romano', 'Marco Ferrari', 'Sara Colombo', 'Andrea Ricci',
-  'Francesca Marino', 'Roberto Greco', 'Test'
+  'matteo casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
+  'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
+  'Gloria Romano', 'Vittoria Pelassa', 'Test'
 ].sort();
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'];
@@ -107,7 +107,7 @@ const App = () => {
              <div className="inline-flex p-4 bg-indigo-600 rounded-3xl shadow-lg shadow-indigo-200 mb-2">
                 <Users className="w-8 h-8 text-white" />
              </div>
-             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Staff Portal</h1>
+             <h1 className="text-3xl font-black text-slate-800 tracking-tight">Presenze triduo pasquale 2026</h1>
              <p className="text-slate-500 font-medium">Cerca il tuo nome per iniziare</p>
           </div>
 
