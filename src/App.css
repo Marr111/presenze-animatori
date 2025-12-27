@@ -1,1 +1,18 @@
+/* Aggiungi questo per il contenitore principale */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
 
+/* Contenitore del grafico */
+.recharts-wrapper {
+  width: 100% !important;
+  height: 400px !important; /* O l'altezza che preferisci */
+}
+
+/* Se hai un div che contiene il grafico */
+.chart-container {
+  width: 100%;
+  height: 400px;
+  min-height: 400px;
+}
