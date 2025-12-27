@@ -1,16 +1,15 @@
 import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
-// Importazione icone
 import { 
   Check, Calendar, Users, LogOut, Search, Printer, Shield,
   Activity, Clock, ChevronRight, CheckCircle2, 
-  UserCheck, Lightbulb, Send, Trash2, BarChart3, TrendingUp, Utensils, AlertTriangle, Database, Trash
+  UserCheck, Lightbulb, Send, Trash2, BarChart3, TrendingUp, Utensils, AlertTriangle, Database, Trash, PieChart as PieIcon
 } from 'lucide-react';
 
-// Importazione componenti Recharts - Rimosso ResponsiveContainer per stabilità
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar
+  PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar,
+  LineChart, Line
 } from 'recharts';
 
 // --- CONFIGURAZIONE COSTANTI ---
@@ -22,11 +21,10 @@ const PEOPLE = [
   'Gloria Romano', 'Vittoria Pelassa'
 ].sort();
 
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4'];
+const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
 const ALL_PERIODS = DATES.flatMap(d => TIME_SLOTS.map(s => ({ date: d, slot: s })));
 
 const App = () => {
-  // --- STATO ---
   const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [availabilities, setAvailabilities] = useState({});
@@ -36,7 +34,6 @@ const App = () => {
   const [testView, setTestView] = useState('summary'); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- CARICAMENTO DATI ---
   useEffect(() => {
     const loadData = async () => {
       if (isLoading) return;
@@ -65,44 +62,33 @@ const App = () => {
     try {
       if (window.storage) await window.storage.set(key, JSON.stringify(newData), true);
       else localStorage.setItem(key, JSON.stringify(newData));
-    } catch (e) { console.error("Errore salvataggio:", e); }
+    } catch (e) { console.error("Errore:", e); }
   };
 
-  // --- FUNZIONI RESET / TEST DATA (NUOVE) ---
   const clearAllData = async () => {
-    if (window.confirm("ATTENZIONE: Questa azione cancellerà DEFINITIVAMENTE tutte le presenze e tutte le idee. Sei sicuro?")) {
+    if (window.confirm("ATTENZIONE: Azione distruttiva. Cancellare tutto?")) {
       setAvailabilities({});
       setIdeas([]);
       await saveData('availabilities_shared', {});
       await saveData('triduo_ideas', []);
-      alert("Database svuotato con successo.");
     }
   };
 
   const setTestData = async () => {
-    if (window.confirm("Questa azione sostituirà i dati attuali con dei dati di prova. Procedere?")) {
-      const dummyAvail = {};
-      PEOPLE.forEach(p => {
-        dummyAvail[p] = {};
-        DATES.forEach(d => {
-          dummyAvail[p][d] = {};
-          TIME_SLOTS.forEach(s => {
-            if (Math.random() > 0.6) dummyAvail[p][d][s] = true;
-          });
-        });
+    const dummyAvail = {};
+    PEOPLE.forEach(p => {
+      dummyAvail[p] = {};
+      DATES.forEach(d => {
+        dummyAvail[p][d] = {};
+        TIME_SLOTS.forEach(s => { if (Math.random() > 0.5) dummyAvail[p][d][s] = true; });
       });
-      const dummyIdeas = [{ id: 1, text: "Esempio di idea per il triduo", author: "Sistema" }];
-      setAvailabilities(dummyAvail);
-      setIdeas(dummyIdeas);
-      await saveData('availabilities_shared', dummyAvail);
-      await saveData('triduo_ideas', dummyIdeas);
-      alert("Dati di test inseriti.");
-    }
+    });
+    setAvailabilities(dummyAvail);
+    await saveData('availabilities_shared', dummyAvail);
   };
 
-  // --- LOGICA DISPONIBILITÀ ---
   const toggleAvailability = async (date, slot) => {
-    if (!currentUser || currentUser === 'Admin' || isLoading) return;
+    if (!currentUser || currentUser === 'Admin') return;
     const current = availabilities[currentUser]?.[date]?.[slot];
     const newValue = current === true ? null : true;
     const updated = {
@@ -115,42 +101,76 @@ const App = () => {
     setTimeout(() => setShowSuccess(false), 2000);
   };
 
-  // --- UTILITY ---
   const countTotal = (date, slot) => PEOPLE.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const filteredPeople = useMemo(() => PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
   const getInitials = (name) => name.split(' ').map(n => n[0]).filter(char => /[a-zA-Z]/.test(char)).join('').toUpperCase();
 
-  // --- DATI GRAFICI ---
+  // --- LOGICA GRAFICI (8 VISUALIZZAZIONI) ---
   const chartsData = useMemo(() => {
+    // 1. Timeline presenze
     const timeline = ALL_PERIODS.map(p => ({
       name: `${p.date.split(' ')[1]} ${p.slot[0]}.`,
       persone: countTotal(p.date, p.slot)
     }));
+
+    // 2. Carico Pasti
     const meals = [
       { name: 'Pranzi', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo'), 0) },
       { name: 'Cene', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Cena'), 0) }
     ];
-    const topStaff = PEOPLE.map(p => {
+
+    // 3. Impegno Staff (ORDINE ALFABETICO)
+    const staffActivity = PEOPLE.map(p => {
       let count = 0;
       DATES.forEach(d => TIME_SLOTS.forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
       return { name: p.split(' ')[0], impegni: count };
-    }).sort((a,b) => b.impegni - a.impegni).slice(0, 8);
-    return { timeline, meals, topStaff };
-  }, [availabilities]);
+    });
 
-  // --- LOGIN VIEW ---
+    // 4. Copertura Radar
+    const radar = TIME_SLOTS.map(s => ({
+      subject: s,
+      A: DATES.reduce((acc, d) => acc + countTotal(d, s), 0),
+      fullMark: PEOPLE.length
+    }));
+
+    // 5. Presenze per Giorno
+    const dailyTotal = DATES.map(d => ({
+      name: d,
+      totale: TIME_SLOTS.reduce((acc, s) => acc + countTotal(d, s), 0)
+    }));
+
+    // 6. Distribuzione Fasce (Pie)
+    const slotDistribution = TIME_SLOTS.map(s => ({
+      name: s,
+      value: DATES.reduce((acc, d) => acc + countTotal(d, s), 0)
+    }));
+
+    // 7. Contributo Idee (ORDINE ALFABETICO)
+    const ideasByPerson = PEOPLE.map(p => ({
+      name: p.split(' ')[0],
+      count: ideas.filter(i => i.author === p).length
+    })).filter(d => d.count >= 0);
+
+    // 8. Dettaglio fasce orarie
+    const slotAverages = TIME_SLOTS.map(s => ({
+      name: s,
+      media: parseFloat((DATES.reduce((acc, d) => acc + countTotal(d, s), 0) / DATES.length).toFixed(1))
+    }));
+
+    return { timeline, meals, staffActivity, radar, dailyTotal, slotDistribution, ideasByPerson, slotAverages };
+  }, [availabilities, ideas]);
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex flex-col items-center justify-center">
-        <div className="text-center space-y-2 mb-10">
-           <div className="inline-flex p-3 bg-indigo-600 rounded-2xl shadow-lg text-white"><Users size={28} /></div>
-           <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none text-center">Triduo pasquale 2026</h1>
+        <div className="text-center mb-10">
+           <h1 className="text-4xl font-black text-slate-800 tracking-tight">Triduo 2026</h1>
            <p className="text-slate-500 font-medium italic">ciaooo</p>
         </div>
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-6 flex flex-col h-[550px]">
-            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Search size={20} className="text-indigo-600"/> Accedi</h2>
-            <input type="text" placeholder="Cerca il tuo nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 outline-none focus:ring-2 focus:ring-indigo-500" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <div className="bg-white rounded-[2.5rem] shadow-xl border p-6 flex flex-col h-[500px]">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-indigo-600"><Search size={20}/> Accedi</h2>
+            <input type="text" placeholder="Cerca nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
               {filteredPeople.map(p => (
                 <button key={p} onClick={() => setCurrentUser(p)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all group">
@@ -160,37 +180,32 @@ const App = () => {
                 </button>
               ))}
             </div>
-            <button onClick={() => setCurrentUser('Admin')} className="mt-4 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 font-bold text-xs"><Shield size={14} /> Pannello Admin</button>
+            <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 border-2 border-dashed rounded-2xl text-slate-400 font-bold text-xs"><Shield size={14} className="inline mr-2"/> Admin</button>
           </div>
-          <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-6 flex flex-col h-[550px]">
-            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb size={20} className="text-amber-500"/> Idee Triduo</h2>
+          <div className="bg-white rounded-[2.5rem] shadow-xl border p-6 flex flex-col h-[500px]">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-amber-500"><Lightbulb size={20}/> Idee</h2>
             <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="Scrivi un'idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (() => {
+              <input type="text" placeholder="Nuova idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && (() => {
                 if (!newIdea.trim()) return;
-                const updatedIdeas = [...ideas, { id: Date.now(), text: newIdea, author: 'Anonimo' }];
-                setIdeas(updatedIdeas);
-                setNewIdea("");
-                saveData('triduo_ideas', updatedIdeas);
+                const updated = [...ideas, { id: Date.now(), text: newIdea, author: 'Anonimo' }];
+                setIdeas(updated); setNewIdea(""); saveData('triduo_ideas', updated);
               })()} />
               <button onClick={() => {
                 if (!newIdea.trim()) return;
-                const updatedIdeas = [...ideas, { id: Date.now(), text: newIdea, author: 'Anonimo' }];
-                setIdeas(updatedIdeas);
-                setNewIdea("");
-                saveData('triduo_ideas', updatedIdeas);
-              }} className="p-3 bg-amber-500 text-white rounded-2xl hover:bg-amber-600"><Send size={18} /></button>
+                const updated = [...ideas, { id: Date.now(), text: newIdea, author: 'Anonimo' }];
+                setIdeas(updated); setNewIdea(""); saveData('triduo_ideas', updated);
+              }} className="p-3 bg-amber-500 text-white rounded-2xl"><Send size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
               {ideas.length === 0 ? <div className="h-full flex flex-col items-center justify-center opacity-30 text-xs font-bold uppercase tracking-widest">Nessuna idea</div> : 
                 [...ideas].reverse().map(idea => (
-                  <div key={idea.id} className="group p-3 bg-slate-50 border rounded-xl hover:border-amber-200">
+                  <div key={idea.id} className="group p-3 bg-slate-50 border rounded-xl">
                     <p className="text-slate-700 font-bold text-sm leading-tight">{idea.text}</p>
                     <div className="mt-2 flex justify-between items-center text-[9px] font-black uppercase text-slate-400">
                       <span>Da: {idea.author}</span>
                       <button onClick={async () => {
                         const updated = ideas.filter(i => i.id !== idea.id);
-                        setIdeas(updated);
-                        await saveData('triduo_ideas', updated);
+                        setIdeas(updated); await saveData('triduo_ideas', updated);
                       }} className="text-slate-300 hover:text-rose-500"><Trash2 size={12} /></button>
                     </div>
                   </div>
@@ -203,13 +218,12 @@ const App = () => {
     );
   }
 
-  // --- VISTA MAIN ---
   const isAdmin = currentUser === 'Admin';
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
       <nav className="sticky top-0 z-40 bg-white/70 backdrop-blur-xl border-b px-6 py-4 flex justify-between items-center no-print">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentUser(null)}>
-          <Activity className="text-indigo-600" /> <span className="font-black">TRACKER 2026</span>
+          <Activity className="text-indigo-600" /> <span className="font-black uppercase tracking-widest">Tracker</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">{currentUser}</span>
@@ -219,101 +233,112 @@ const App = () => {
 
       <main className="max-w-6xl mx-auto p-4 sm:p-8">
         {isAdmin ? (
-          <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="space-y-8">
             <div className="flex flex-wrap gap-2 justify-between items-center no-print">
               <div className="inline-flex bg-slate-200/50 p-1.5 rounded-2xl">
                 {['summary', 'caranzano', 'matrix', 'charts', 'data'].map(v => (
-                  <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                  <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}>
                     {v === 'summary' ? 'Tabella' : v === 'caranzano' ? 'Pasti' : v === 'matrix' ? 'Foglio' : v === 'charts' ? 'Grafici' : 'Dati'}
                   </button>
                 ))}
               </div>
-              <button onClick={() => window.print()} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-indigo-100"><Printer size={18} /> Stampa</button>
+              <button onClick={() => window.print()} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-lg"><Printer size={18} /> Stampa</button>
             </div>
 
             {testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Timeline */}
+                {/* 1. Timeline */}
                 <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-indigo-600"><TrendingUp size={16}/> Affluenza</h3>
-                  <AreaChart width={450} height={250} data={chartsData.timeline} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-indigo-600"><TrendingUp size={16}/> Trend Affluenza</h3>
+                  <AreaChart width={480} height={250} data={chartsData.timeline}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{fontSize: 10}} />
+                    <XAxis dataKey="name" tick={{fontSize: 9}} />
                     <YAxis tick={{fontSize: 10}} />
                     <Tooltip />
                     <Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122" />
                   </AreaChart>
                 </div>
-                {/* Pasti */}
+                {/* 2. Pasti */}
                 <div className="bg-white p-6 rounded-3xl border shadow-sm">
-                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-rose-600"><Utensils size={16}/> Carico Cucina</h3>
-                  <PieChart width={450} height={250}>
-                    <Pie data={chartsData.meals} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-rose-600"><Utensils size={16}/> Carico Cucina Totale</h3>
+                  <PieChart width={480} height={250}>
+                    <Pie data={chartsData.meals} cx="50%" cy="50%" innerRadius={60} outerRadius={80} dataKey="value" label>
                       {chartsData.meals.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
                     </Pie>
                     <Tooltip />
                     <Legend />
                   </PieChart>
                 </div>
-                {/* Staff */}
-                <div className="bg-white p-6 rounded-3xl border shadow-sm col-span-1 md:col-span-2">
-                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-emerald-600"><Users size={16}/> Classifica Staff (Slot Coperti)</h3>
-                  <BarChart width={900} height={300} data={chartsData.topStaff} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                {/* 3. Impegno Staff (ALFABETICO) */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-emerald-600"><Users size={16}/> Presenze per Persona</h3>
+                  <BarChart width={480} height={250} data={chartsData.staffActivity}>
                     <XAxis dataKey="name" tick={{fontSize: 10}} />
                     <YAxis />
                     <Tooltip />
                     <Bar dataKey="impegni" fill="#10b981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </div>
+                {/* 4. Radar */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-amber-600"><Activity size={16}/> Bilanciamento Fasce</h3>
+                  <RadarChart width={480} height={250} cx="50%" cy="50%" outerRadius="80%" data={chartsData.radar}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="subject" tick={{fontSize: 9}} />
+                    <Radar name="Staff" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6} />
+                    <Tooltip />
+                  </RadarChart>
+                </div>
+                {/* 5. Affluenza per Giorno */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-cyan-600"><Calendar size={16}/> Affluenza Totale Gionaliera</h3>
+                  <BarChart width={480} height={250} data={chartsData.dailyTotal}>
+                    <XAxis dataKey="name" tick={{fontSize: 10}} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="totale" fill="#06b6d4" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </div>
+                {/* 6. Distribuzione Slot */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-indigo-400"><PieIcon size={16}/> Distribuzione per Fascia</h3>
+                  <PieChart width={480} height={250}>
+                    <Pie data={chartsData.slotDistribution} cx="50%" cy="50%" innerRadius={40} outerRadius={80} dataKey="value">
+                      {chartsData.slotDistribution.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </div>
+                {/* 7. Idee per Persona (ALFABETICO) */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-purple-600"><Lightbulb size={16}/> Idee inviate per Persona</h3>
+                  <BarChart width={480} height={250} data={chartsData.ideasByPerson}>
+                    <XAxis dataKey="name" tick={{fontSize: 10}} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </div>
+                {/* 8. Media Staff */}
+                <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                  <h3 className="font-black text-xs uppercase mb-6 flex items-center gap-2 text-slate-600"><UserCheck size={16}/> Media Persone per Fascia</h3>
+                  <LineChart width={480} height={250} data={chartsData.slotAverages}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" tick={{fontSize: 10}} />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="media" stroke="#475569" strokeWidth={3} dot={{r: 6}} />
+                  </LineChart>
+                </div>
               </div>
             ) : testView === 'data' ? (
-              /* SEZIONE GESTIONE DATI */
               <div className="space-y-12 py-10">
                 <div className="bg-white p-10 rounded-[3rem] border-4 border-rose-100 shadow-2xl space-y-8">
-                  <div className="flex items-center gap-6 text-rose-600">
-                    <AlertTriangle size={64} strokeWidth={3} />
-                    <div>
-                      <h2 className="text-5xl font-black uppercase tracking-tighter">Zona Pericolosa</h2>
-                      <p className="text-xl font-bold opacity-60 italic">Gestione distruttiva del database</p>
-                    </div>
-                  </div>
-                  
+                  <div className="flex items-center gap-6 text-rose-600"><AlertTriangle size={64}/><div><h2 className="text-5xl font-black uppercase">Zona Pericolosa</h2><p className="text-xl font-bold opacity-60">Reset Database</p></div></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* PULSANTE RESET TOTALE */}
-                    <div className="bg-rose-50 p-8 rounded-[2rem] border-2 border-rose-200 space-y-6">
-                      <div className="flex items-center gap-3 text-rose-700">
-                        <Trash size={32} />
-                        <h3 className="text-2xl font-black uppercase">Pulisci Tutto</h3>
-                      </div>
-                      <p className="text-rose-900 font-bold leading-tight">
-                        CANCELLA DEFINITIVAMENTE TUTTE LE DISPONIBILITÀ E LE IDEE. 
-                        QUESTA AZIONE NON PUÒ ESSERE ANNULLATA.
-                      </p>
-                      <button 
-                        onClick={clearAllData}
-                        className="w-full bg-rose-600 hover:bg-rose-700 text-white py-6 rounded-2xl font-black text-xl shadow-xl shadow-rose-200 transition-all active:scale-95"
-                      >
-                        ESEGUI WIPE DATABASE
-                      </button>
-                    </div>
-
-                    {/* PULSANTE TEST DATA */}
-                    <div className="bg-indigo-50 p-8 rounded-[2rem] border-2 border-indigo-200 space-y-6">
-                      <div className="flex items-center gap-3 text-indigo-700">
-                        <Database size={32} />
-                        <h3 className="text-2xl font-black uppercase">Dati di Test</h3>
-                      </div>
-                      <p className="text-indigo-900 font-bold leading-tight">
-                        SOVRASCRIVI I DATI ATTUALI CON VALORI CASUALI GENERATI DAL SISTEMA. 
-                        UTILE PER CONTROLLARE I GRAFICI.
-                      </p>
-                      <button 
-                        onClick={setTestData}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-6 rounded-2xl font-black text-xl shadow-xl shadow-indigo-200 transition-all active:scale-95"
-                      >
-                        GENERA DATI FAKE
-                      </button>
-                    </div>
+                    <div className="bg-rose-50 p-8 rounded-[2rem] border-2 border-rose-200"><h3 className="text-2xl font-black text-rose-700 mb-4">Pulisci Tutto</h3><button onClick={clearAllData} className="w-full bg-rose-600 text-white py-6 rounded-2xl font-black text-xl">ESEGUI WIPE</button></div>
+                    <div className="bg-indigo-50 p-8 rounded-[2rem] border-2 border-indigo-200"><h3 className="text-2xl font-black text-indigo-700 mb-4">Dati di Test</h3><button onClick={setTestData} className="w-full bg-indigo-600 text-white py-6 rounded-2xl font-black text-xl">GENERA FAKE</button></div>
                   </div>
                 </div>
               </div>
@@ -348,8 +373,7 @@ const App = () => {
             )}
           </div>
         ) : (
-          /* VISTA UTENTE */
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-6">
             <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Le tue disponibilità</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {DATES.map(d => (
@@ -370,7 +394,7 @@ const App = () => {
               ))}
             </div>
             <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-lg border-t flex justify-center z-50 no-print">
-              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="max-w-md w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 shadow-2xl active:scale-95 transition-all">
+              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="max-w-md w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3">
                 <CheckCircle2 className="text-emerald-400" /> SALVA ED ESCI
               </button>
             </div>
