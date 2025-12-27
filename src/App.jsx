@@ -109,8 +109,8 @@ const App = () => {
            <div className="inline-flex p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 mb-2 text-white">
               <Users size={28} />
            </div>
-           <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">Staff Portal</h1>
-           <p className="text-slate-500 font-medium">Benvenuti al Triduo 2026</p>
+           <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none">Triduo pasquale 2026</h1>
+           <p className="text-slate-500 font-medium">ciaooo</p>
         </div>
 
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
