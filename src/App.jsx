@@ -335,7 +335,7 @@ const App = () => {
             ) : testView === 'data' ? (
               <div className="space-y-12 py-10">
                 <div className="bg-white p-10 rounded-[3rem] border-4 border-rose-100 shadow-2xl space-y-8">
-                  <div className="flex items-center gap-6 text-rose-600"><AlertTriangle size={64}/><div><h2 className="text-5xl font-black uppercase">Zona Pericolosa</h2><p className="text-xl font-bold opacity-60">Reset Database</p></div></div>
+                  <div className="flex items-center gap-6 text-rose-600"><AlertTriangle size={64}/><div><h2 className="text-5xl font-black uppercase">Non toccare se non si sa cosa si sta facendo</h2><p className="text-xl font-bold opacity-60">Reset Database</p></div></div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-rose-50 p-8 rounded-[2rem] border-2 border-rose-200"><h3 className="text-2xl font-black text-rose-700 mb-4">Pulisci Tutto</h3><button onClick={clearAllData} className="w-full bg-rose-600 text-white py-6 rounded-2xl font-black text-xl">ESEGUI WIPE</button></div>
                     <div className="bg-indigo-50 p-8 rounded-[2rem] border-2 border-indigo-200"><h3 className="text-2xl font-black text-indigo-700 mb-4">Dati di Test</h3><button onClick={setTestData} className="w-full bg-indigo-600 text-white py-6 rounded-2xl font-black text-xl">GENERA FAKE</button></div>
@@ -405,4 +405,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App;per
