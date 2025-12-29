@@ -2,17 +2,15 @@ import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Search, Printer, ChevronRight, CheckCircle2, UserPlus,
-  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, BarChart3
+  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, Cell, PieChart, Pie
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar
 } from 'recharts';
 
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
-
 const INITIAL_PEOPLE = [
   'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
@@ -31,7 +29,6 @@ const App = () => {
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- SINCRONIZZAZIONE ---
   const loadData = async () => {
     try {
       const response = await fetch('/api/get-data');
@@ -64,7 +61,6 @@ const App = () => {
     setIsSaving(false);
   };
 
-  // --- AZIONI ---
   const handleFinalSave = async () => {
     await persistToCloud({ availabilities, ideas, people });
     setCurrentUser(null);
@@ -83,24 +79,22 @@ const App = () => {
 
   const addIdea = async () => {
     if (!newIdea.trim()) return;
-    const newIdeas = [...ideas, { id: Date.now(), text: newIdea, author: currentUser || 'Anonimo' }];
+    const newIdeas = [...ideas, { id: Date.now(), text: newIdea }];
     setIdeas(newIdeas);
     setNewIdea("");
     await persistToCloud({ availabilities, ideas: newIdeas, people });
   };
 
   const toggleAvailability = (date, slot) => {
-    const updated = {
-      ...availabilities,
+    setAvailabilities(prev => ({
+      ...prev,
       [currentUser]: { 
-        ...availabilities[currentUser], 
-        [date]: { ...availabilities[currentUser]?.[date], [slot]: !availabilities[currentUser]?.[date]?.[slot] } 
+        ...prev[currentUser], 
+        [date]: { ...prev[currentUser]?.[date], [slot]: !prev[currentUser]?.[date]?.[slot] } 
       }
-    };
-    setAvailabilities(updated);
+    }));
   };
 
-  // --- UTILITY ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -126,7 +120,7 @@ const App = () => {
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px] border">
             <h2 className="text-xl font-black mb-6">Accedi</h2>
-            <input type="text" placeholder="Cerca nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 border outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <input type="text" placeholder="Cerca nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 border outline-none focus:border-indigo-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             <div className="flex-1 overflow-y-auto space-y-1">
               {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
                 <button key={p} onClick={() => { setCurrentUser(p); loadData(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all">
@@ -143,11 +137,14 @@ const App = () => {
           </div>
           <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px] border">
             <h2 className="text-xl font-black mb-6">Idee</h2>
+            <div className="flex gap-2 mb-4">
+              <input type="text" placeholder="Nuova idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl border outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} />
+              <button onClick={addIdea} className="p-3 bg-indigo-600 text-white rounded-2xl"><Send size={18} /></button>
+            </div>
             <div className="flex-1 overflow-y-auto space-y-3">
               {ideas.map(idea => (
-                <div key={idea.id} className="p-3 bg-slate-50 border rounded-xl">
-                  <p className="text-slate-700 font-bold text-sm leading-tight">"{idea.text}"</p>
-                  <div className="mt-2 text-[9px] font-black uppercase text-slate-400">Da: {idea.author}</div>
+                <div key={idea.id} className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <p className="text-slate-700 font-bold text-sm leading-tight italic">"{idea.text}"</p>
                 </div>
               ))}
             </div>
@@ -162,13 +159,9 @@ const App = () => {
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
       <style>{`@media print { @page { size: landscape; } nav, .no-print { display: none !important; } .print-area { display: block !important; width: 100% !important; border: none !important; } table { font-size: 8px !important; } }`}</style>
-      
       <nav className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 no-print">
         <div className="font-black text-indigo-600 text-xl cursor-pointer" onClick={() => setCurrentUser(null)}>TRACKER 2026</div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-bold uppercase">{currentUser}</span>
-          <button onClick={() => setCurrentUser(null)} className="text-rose-500"><LogOut size={20}/></button>
-        </div>
+        <button onClick={() => setCurrentUser(null)} className="text-rose-500 flex items-center gap-2 font-bold text-sm uppercase"><span className="hidden sm:inline">{currentUser}</span> <LogOut size={20}/></button>
       </nav>
 
       <main className="max-w-7xl mx-auto p-4 md:p-8">
@@ -176,9 +169,9 @@ const App = () => {
           <div className="space-y-6">
             <div className="flex gap-2 flex-wrap no-print">
               {['summary', 'caranzano', 'matrix', 'charts'].map(v => (
-                <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-indigo-600 text-white' : 'bg-white border'}`}>{v}</button>
+                <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-400'}`}>{v}</button>
               ))}
-              <button onClick={() => window.print()} className="ml-auto px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2"><Printer size={16}/> Stampa Matrix</button>
+              <button onClick={() => window.print()} className="ml-auto px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-2 uppercase"><Printer size={16}/> Stampa</button>
             </div>
 
             {testView === 'matrix' ? (
@@ -204,24 +197,30 @@ const App = () => {
                     <tr>
                       <td className="p-2 border-r">PRESENTI</td>
                       {ALL_PERIODS.map((p,i)=><td key={i} className="text-center border-r">{countTotal(p.date, p.slot)}</td>)}
-                      <td>{people.reduce((acc,p)=>acc+calculateDebt(p),0)}€</td>
+                      <td className="bg-indigo-600">{people.reduce((acc,p)=>acc+calculateDebt(p),0)}€</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
             ) : testView === 'charts' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[700px]">
-                <div className="bg-white p-6 rounded-3xl border flex flex-col">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white p-4 rounded-3xl border flex flex-col items-center">
                   <h3 className="text-xs font-black mb-4 uppercase">Affluenza</h3>
-                  <div className="flex-1"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart></ResponsiveContainer></div>
+                  <AreaChart width={500} height={250} data={chartsData.timeline}>
+                    <CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/>
+                  </AreaChart>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border flex flex-col">
-                  <h3 className="text-xs font-black mb-4 uppercase">Debiti Individuali (€)</h3>
-                  <div className="flex-1"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartsData.debtData}><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/></BarChart></ResponsiveContainer></div>
+                <div className="bg-white p-4 rounded-3xl border flex flex-col items-center">
+                  <h3 className="text-xs font-black mb-4 uppercase">Costi Individuali</h3>
+                  <BarChart width={500} height={250} data={chartsData.debtData}>
+                    <CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="euro" fill="#10b981"/>
+                  </BarChart>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border flex flex-col col-span-1 md:col-span-2">
-                  <h3 className="text-xs font-black mb-4 uppercase text-center">Copertura Fasce Orarie</h3>
-                  <div className="flex-1 h-[300px]"><ResponsiveContainer width="100%" height="100%"><RadarChart data={chartsData.radar}><PolarGrid/><PolarAngleAxis dataKey="subject"/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/></RadarChart></ResponsiveContainer></div>
+                <div className="bg-white p-4 rounded-3xl border flex flex-col items-center col-span-1 md:col-span-2">
+                  <h3 className="text-xs font-black mb-4 uppercase">Copertura Fasce</h3>
+                  <RadarChart cx={250} cy={125} outerRadius={80} width={500} height={250} data={chartsData.radar}>
+                    <PolarGrid/><PolarAngleAxis dataKey="subject"/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/>
+                  </RadarChart>
                 </div>
               </div>
             ) : testView === 'caranzano' ? (
@@ -231,7 +230,7 @@ const App = () => {
                     <h3 className="text-xl font-black mb-4 uppercase border-b pb-2">{d}</h3>
                     {['Pranzo', 'Cena'].map(m => (
                       <div key={m} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl mb-2">
-                        <span className="font-bold">{m}</span>
+                        <span className="font-bold text-slate-600">{m}</span>
                         <span className="text-3xl font-black text-indigo-600">{countTotal(d, m)}</span>
                       </div>
                     ))}
@@ -245,7 +244,7 @@ const App = () => {
                     <h3 className="font-black text-indigo-600 border-b pb-2 mb-4 uppercase">{d}</h3>
                     {TIME_SLOTS.map(s => (
                       <div key={s} className="flex justify-between py-2 border-b last:border-0">
-                        <span className="font-bold text-slate-600">{s}</span>
+                        <span className="font-bold text-slate-600 text-sm">{s}</span>
                         <span className="font-black">{countTotal(d, s)}</span>
                       </div>
                     ))}
@@ -257,20 +256,20 @@ const App = () => {
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
             <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white flex justify-between items-center shadow-xl">
-              <div><h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2><p className="opacity-80 font-medium">Seleziona quando ci sarai</p></div>
-              <div className="text-right"><div className="text-[10px] font-black uppercase opacity-60">Totale Pasti</div><div className="text-3xl font-black">{calculateDebt(currentUser)}€</div></div>
+              <div><h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2><p className="opacity-80 font-medium">Gestisci le tue disponibilità</p></div>
+              <div className="text-right"><div className="text-[10px] font-black uppercase opacity-60 tracking-widest">Contributo Pasti</div><div className="text-3xl font-black">{calculateDebt(currentUser)}€</div></div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {DATES.map(d => (
                 <div key={d} className="bg-white p-6 rounded-3xl border shadow-sm">
-                  <div className="font-black mb-4 text-center border-b pb-2 text-indigo-600 uppercase tracking-widest">{d}</div>
+                  <div className="font-black mb-4 text-center border-b pb-2 text-indigo-600 uppercase tracking-widest text-sm">{d}</div>
                   <div className="space-y-2">
                     {TIME_SLOTS.map(s => {
                       const active = availabilities[currentUser]?.[d]?.[s];
                       return (
-                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`w-full py-4 rounded-2xl font-black uppercase transition-all flex items-center justify-between px-4 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-300'}`}>
-                          <div className="flex items-center gap-2">{['Pranzo','Cena'].includes(s) ? <Utensils size={16}/> : <Clock size={16}/>} {s}</div>
-                          {active && <CheckCircle2 size={20}/>}
+                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`w-full py-4 rounded-2xl font-black uppercase transition-all flex items-center justify-between px-4 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300'}`}>
+                          <div className="flex items-center gap-2 text-xs">{['Pranzo','Cena'].includes(s) ? <Utensils size={14}/> : <Clock size={14}/>} {s}</div>
+                          {active && <CheckCircle2 size={18}/>}
                         </button>
                       );
                     })}
@@ -278,7 +277,7 @@ const App = () => {
                 </div>
               ))}
             </div>
-            <div className="fixed bottom-6 left-0 right-0 p-4 flex justify-center z-50">
+            <div className="fixed bottom-6 left-0 right-0 p-4 flex justify-center z-50 no-print">
               <button onClick={handleFinalSave} disabled={isSaving} className="w-full max-w-md bg-slate-900 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
                 {isSaving ? "SALVATAGGIO..." : "SALVA E TORNA ALLA HOME"}
               </button>
