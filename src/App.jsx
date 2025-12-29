@@ -2,17 +2,19 @@ import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, Calendar, Users, LogOut, Search, Printer, Shield,
-  Activity, Clock, ChevronRight, CheckCircle2, 
-  UserCheck, Lightbulb, Send, Trash2, BarChart3, TrendingUp, Utensils, AlertTriangle, Database, Trash, PieChart as PieIcon
+  Activity, Clock, ChevronRight, CheckCircle2, UserPlus,
+  UserCheck, Lightbulb, Send, Trash2, BarChart3, TrendingUp, Utensils, AlertTriangle, Database, Trash, PieChart as PieIcon, Wallet
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, 
-  PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar, LineChart, Line
+  PieChart, Pie, Cell, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar, LineChart, Line, ResponsiveContainer
 } from 'recharts';
 
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
-const PEOPLE = [
+const MEAL_PRICE = 5;
+
+const INITIAL_PEOPLE = [
   'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
   'Gloria Romano', 'Vittoria Pelassa'
@@ -26,21 +28,19 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [availabilities, setAvailabilities] = useState({});
   const [ideas, setIdeas] = useState([]);
+  const [people, setPeople] = useState(INITIAL_PEOPLE);
   const [newIdea, setNewIdea] = useState("");
-  const [testView, setTestView] = useState('summary'); 
+  const [testView, setTestView] = useState('summary');
 
   // --- LOGICA SINCRONIZZAZIONE ---
-const loadData = async () => {
+  const loadData = async () => {
     try {
       const response = await fetch('/api/get-data');
       const result = await response.json();
-      
-      // Correzione: result contiene già availabilities e ideas se usi il nuovo backend
       setAvailabilities(result.availabilities || {});
       setIdeas(result.ideas || []);
-    } catch (e) { 
-      console.error("Errore caricamento:", e); 
-    }
+      if (result.people && result.people.length > 0) setPeople(result.people);
+    } catch (e) { console.error("Errore caricamento dati"); }
   };
 
   useEffect(() => {
@@ -49,23 +49,32 @@ const loadData = async () => {
     return () => clearInterval(interval);
   }, []);
 
-  const saveData = async (key, newData) => {
+  const updateDatabase = async (updatedAvail, updatedIdeas, updatedPeople) => {
     try {
       await fetch('/api/save-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, data: newData }),
+        body: JSON.stringify({ 
+            key: 'master_sync', 
+            data: { 
+                availabilities: updatedAvail || availabilities, 
+                ideas: updatedIdeas || ideas,
+                people: updatedPeople || people
+            } 
+        }),
       });
-    } catch (e) { console.error("Errore salvataggio cloud"); }
+    } catch (e) { console.error("Errore salvataggio"); }
   };
 
   // --- GESTIONE AZIONI ---
-  const addIdea = async () => {
-    if (!newIdea.trim()) return;
-    const updated = [...ideas, { id: Date.now(), text: newIdea, author: currentUser || 'Anonimo' }];
-    setIdeas(updated);
-    setNewIdea("");
-    await saveData('triduo_ideas', updated);
+  const addPerson = async () => {
+    const name = prompt("Inserisci il tuo nome e cognome:");
+    if (name && !people.includes(name)) {
+      const updatedPeople = [...people, name].sort();
+      setPeople(updatedPeople);
+      await updateDatabase(null, null, updatedPeople);
+      setCurrentUser(name);
+    }
   };
 
   const toggleAvailability = async (date, slot) => {
@@ -77,74 +86,102 @@ const loadData = async () => {
       [currentUser]: { ...availabilities[currentUser], [date]: { ...availabilities[currentUser]?.[date], [slot]: newValue } }
     };
     setAvailabilities(updated);
-    await saveData('availabilities_shared', updated);
+    await updateDatabase(updated, null, null);
   };
 
-  const clearAllData = async () => {
-    if (window.confirm("Cancellare TUTTO?")) {
-      setAvailabilities({}); setIdeas([]);
-      await saveData('availabilities_shared', {});
-      await saveData('triduo_ideas', []);
+  const addIdea = async () => {
+    if (!newIdea.trim()) return;
+    const updated = [...ideas, { id: Date.now(), text: newIdea, author: currentUser || 'Anonimo' }];
+    setIdeas(updated);
+    setNewIdea("");
+    await updateDatabase(null, updated, null);
+  };
+
+  const clearAndFillRandom = async () => {
+    if (window.confirm("Vuoi resettare e generare dati casuali di test?")) {
+      const randomAvail = {};
+      people.forEach(p => {
+        randomAvail[p] = {};
+        DATES.forEach(d => {
+          randomAvail[p][d] = {};
+          TIME_SLOTS.forEach(s => {
+            if (Math.random() > 0.7) randomAvail[p][d][s] = true;
+          });
+        });
+      });
+      setAvailabilities(randomAvail);
+      await updateDatabase(randomAvail, [], people);
     }
   };
 
-  // --- UTILITY GRAFICHE ---
-  const countTotal = (date, slot) => PEOPLE.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
+  // --- UTILITY ---
+  const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   
-  // INIZIALI PULITE (LT invece di LT0)
   const getInitials = (name) => {
-    return name.split(' ')
-      .filter(word => isNaN(word)) 
-      .map(n => n[0])
-      .join('')
-      .toUpperCase();
+    if (name === 'Vittoria Pelassa') return "VP (VICE)";
+    if (name.includes('Lorenzo Trucco')) return "LT (TENENTE)";
+    return name.split(' ').filter(word => isNaN(word)).map(n => n[0]).join('').toUpperCase();
   };
 
-  const filteredPeople = useMemo(() => PEOPLE.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm]);
+  const calculateDebt = (person) => {
+    let meals = 0;
+    DATES.forEach(d => {
+      if (availabilities[person]?.[d]?.['Pranzo']) meals++;
+      if (availabilities[person]?.[d]?.['Cena']) meals++;
+    });
+    return meals * MEAL_PRICE;
+  };
+
+  const filteredPeople = useMemo(() => people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())), [searchTerm, people]);
 
   const chartsData = useMemo(() => {
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
-    const meals = [{ name: 'Pranzi', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo'), 0) }, { name: 'Cene', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Cena'), 0) }];
-    const staffActivity = PEOPLE.map(p => {
-      let count = 0;
-      DATES.forEach(d => TIME_SLOTS.forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
-      return { name: p.split(' ')[0], impegni: count };
-    });
-    const radar = TIME_SLOTS.map(s => ({ subject: s, A: DATES.reduce((acc, d) => acc + countTotal(d, s), 0) }));
-    return { timeline, meals, staffActivity, radar };
-  }, [availabilities]);
+    const debtData = people.map(p => ({ name: p.split(' ')[0], euro: calculateDebt(p) })).filter(d => d.euro > 0);
+    return { timeline, debtData };
+  }, [availabilities, people]);
 
   // --- RENDERING ---
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex flex-col items-center justify-center">
-        <h1 className="text-4xl font-black text-slate-800 mb-10">Triduo 2026</h1>
-        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px]">
-            <h2 className="text-xl font-black mb-6">Accedi</h2>
-            <input type="text" placeholder="Cerca nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            <div className="flex-1 overflow-y-auto space-y-1">
+      <div className="min-h-screen bg-slate-50 p-4 flex flex-col items-center justify-center">
+        <style>{`@media print { .no-print { display: none; } }`}</style>
+        <h1 className="text-4xl font-black text-indigo-900 mb-10">Triduo Tracker 2026</h1>
+        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 no-print">
+          <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[600px] border border-slate-200">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><UserCheck /> Accedi</h2>
+            <div className="relative mb-4">
+               <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
+               <input type="text" placeholder="Cerca il tuo nome..." className="w-full pl-12 pr-4 py-3 bg-slate-50 rounded-2xl outline-none border focus:border-indigo-400 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1 pr-2">
               {filteredPeople.map(p => (
-                <button key={p} onClick={() => setCurrentUser(p)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">{getInitials(p)}</div>
+                <button key={p} onClick={() => setCurrentUser(p)} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all group">
+                  <div className="w-12 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-[10px] leading-none px-1 text-center">{getInitials(p)}</div>
                   <span className="font-bold text-slate-700">{p}</span>
-                  <ChevronRight className="ml-auto w-4 h-4 text-slate-300" />
+                  <ChevronRight className="ml-auto w-4 h-4 text-slate-300 group-hover:text-indigo-500" />
                 </button>
               ))}
+              {filteredPeople.length === 0 && (
+                <button onClick={addPerson} className="w-full p-8 border-2 border-dashed rounded-3xl text-indigo-500 hover:bg-indigo-50 transition-all flex flex-col items-center gap-2">
+                    <UserPlus />
+                    <span className="font-black text-sm text-center">Non trovi il tuo nome?<br/>Inseriscilo qui</span>
+                </button>
+              )}
             </div>
-            <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 border-2 border-dashed rounded-2xl text-slate-400 font-bold text-xs">Admin</button>
+            <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800">Area Admin</button>
           </div>
-          <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px]">
-            <h2 className="text-xl font-black mb-6">Idee</h2>
+          
+          <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[600px] border border-slate-200">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb className="text-amber-500"/> Idee Staff</h2>
             <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="Nuova idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addIdea()} />
-              <button onClick={addIdea} className="p-3 bg-amber-500 text-white rounded-2xl"><Send size={18} /></button>
+              <input type="text" placeholder="Scrivi un'idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl outline-none border" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addIdea()} />
+              <button onClick={addIdea} className="p-4 bg-indigo-600 text-white rounded-2xl hover:scale-105 transition-transform"><Send size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3">
               {ideas.map(idea => (
-                <div key={idea.id} className="p-3 bg-slate-50 border rounded-xl relative group">
-                  <p className="text-slate-700 font-bold text-sm leading-tight">{idea.text}</p>
-                  <div className="mt-2 text-[9px] font-black uppercase text-slate-400">Da: {idea.author}</div>
+                <div key={idea.id} className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                  <p className="text-slate-800 font-bold text-sm leading-tight italic">"{idea.text}"</p>
+                  <div className="mt-2 text-[10px] font-black uppercase text-indigo-400 tracking-tighter">— {idea.author}</div>
                 </div>
               ))}
             </div>
@@ -155,81 +192,182 @@ const loadData = async () => {
   }
 
   const isAdmin = currentUser === 'Admin';
+  
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
-      <nav className="bg-white/70 backdrop-blur-xl border-b px-6 py-4 flex justify-between items-center">
-        <div className="font-black text-indigo-600 cursor-pointer" onClick={() => setCurrentUser(null)}>TRACKER 2026</div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-bold uppercase">{currentUser}</span>
-          <button onClick={() => setCurrentUser(null)} className="text-rose-500"><LogOut size={20}/></button>
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 1cm; }
+          body { background: white; }
+          nav, .no-print, .admin-nav { display: none !important; }
+          .print-area { display: block !important; width: 100% !important; border: none !important; box-shadow: none !important; }
+          table { font-size: 10px !important; }
+          th, td { border: 1px solid #ddd !important; }
+        }
+      `}</style>
+      
+      <nav className="bg-white/80 backdrop-blur-xl border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 no-print">
+        <div className="font-black text-indigo-600 tracking-tighter text-xl" onClick={() => setCurrentUser(null)}>TRIDUO 2026</div>
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex flex-col items-end">
+             <span className="text-[10px] font-black text-slate-400 uppercase">Utente Attivo</span>
+             <span className="text-sm font-bold text-slate-800">{currentUser}</span>
+          </div>
+          <button onClick={() => setCurrentUser(null)} className="p-2 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all"><LogOut size={20}/></button>
         </div>
       </nav>
-      <main className="max-w-6xl mx-auto p-4 sm:p-8">
+
+      <main className="max-w-7xl mx-auto p-4 md:p-8">
         {isAdmin ? (
           <div className="space-y-6">
-            <div className="flex gap-2 flex-wrap">
-              {['summary', 'caranzano', 'matrix', 'charts', 'data'].map(v => (
-                <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase ${testView === v ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>{v}</button>
+            <div className="flex gap-2 flex-wrap admin-nav no-print">
+              {['summary', 'matrix', 'charts', 'data'].map(v => (
+                <button key={v} onClick={() => setTestView(v)} className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${testView === v ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-slate-400 hover:bg-slate-100'}`}>{v}</button>
               ))}
+              <button onClick={() => window.print()} className="ml-auto px-6 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2"><Printer size={16}/> Stampa Matrix</button>
             </div>
-            {testView === 'charts' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white p-6 rounded-3xl border shadow-sm h-[300px]"><h3 className="text-xs font-black uppercase mb-4">Affluenza</h3><AreaChart width={450} height={200} data={chartsData.timeline}><XAxis dataKey="name"/><YAxis/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart></div>
-                <div className="bg-white p-6 rounded-3xl border shadow-sm h-[300px]"><h3 className="text-xs font-black uppercase mb-4">Pasti</h3><PieChart width={450} height={200}><Pie data={chartsData.meals} cx="50%" cy="50%" outerRadius={70} dataKey="value" label>{chartsData.meals.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}</Pie><Tooltip/></PieChart></div>
-                <div className="bg-white p-6 rounded-3xl border shadow-sm h-[300px]"><h3 className="text-xs font-black uppercase mb-4">Staff</h3><BarChart width={450} height={200} data={chartsData.staffActivity}><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="impegni" fill="#10b981" radius={[4,4,0,0]}/></BarChart></div>
-                <div className="bg-white p-6 rounded-3xl border shadow-sm h-[300px]"><h3 className="text-xs font-black uppercase mb-4">Radar</h3><RadarChart width={450} height={200} cx="50%" cy="50%" outerRadius="70%" data={chartsData.radar}><PolarGrid/><PolarAngleAxis dataKey="subject"/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/></RadarChart></div>
+
+            {testView === 'matrix' ? (
+              <div className="bg-white rounded-3xl border shadow-2xl overflow-hidden print-area">
+                <div className="p-6 border-b bg-slate-50 flex justify-between items-center no-print">
+                   <h2 className="font-black text-slate-800 uppercase">Tabella Master Presenze</h2>
+                   <div className="text-xs font-bold text-indigo-600 flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-full"><Wallet size={14}/> Ogni pasto (Pranzo/Cena) = 5.00€</div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[11px] border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100">
+                        <th className="p-4 text-left border-b border-r sticky left-0 bg-slate-100 z-10 w-40">Staff</th>
+                        {ALL_PERIODS.map((p,i)=><th key={i} className="p-2 border-b border-r text-center font-black leading-none bg-slate-50">{p.date.split(' ')[1]}<br/><span className="text-indigo-500">{p.slot}</span></th>)}
+                        <th className="p-4 text-center border-b bg-amber-50 font-black text-amber-700">TOTALE €</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {people.map(person => (
+                        <tr key={person} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-3 font-bold border-b border-r sticky left-0 bg-white z-10">{person}</td>
+                          {ALL_PERIODS.map((p,i)=>(
+                            <td key={i} className={`text-center border-b border-r p-1 ${availabilities[person]?.[p.date]?.[p.slot] ? 'bg-emerald-50' : ''}`}>
+                               {availabilities[person]?.[p.date]?.[p.slot] && <Check size={16} className="mx-auto text-emerald-500"/>}
+                            </td>
+                          ))}
+                          <td className="p-3 text-center border-b bg-amber-50 font-black text-amber-700 text-sm">
+                            {calculateDebt(person)}€
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-indigo-900 text-white">
+                      <tr>
+                        <td className="p-4 font-black uppercase border-r">Persone Presenti</td>
+                        {ALL_PERIODS.map((p,i)=>(
+                          <td key={i} className="text-center font-black text-sm border-r">{countTotal(p.date, p.slot)}</td>
+                        ))}
+                        <td className="bg-indigo-950 p-4 text-center font-black text-sm">
+                          {people.reduce((acc, p) => acc + calculateDebt(p), 0)}€
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            ) : testView === 'charts' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm h-[400px]">
+                    <h3 className="font-black text-slate-800 uppercase mb-6 flex items-center gap-2"><TrendingUp className="text-indigo-500"/> Affluenza Triduo</h3>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <AreaChart data={chartsData.timeline}>
+                           <CartesianGrid strokeDasharray="3 3" vertical={false}/>
+                           <XAxis dataKey="name" tick={{fontSize: 10}}/>
+                           <YAxis hide/>
+                           <Tooltip />
+                           <Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f133" strokeWidth={4}/>
+                        </AreaChart>
+                    </ResponsiveContainer>
+                 </div>
+                 <div className="bg-white p-6 rounded-[2.5rem] border shadow-sm h-[400px]">
+                    <h3 className="font-black text-slate-800 uppercase mb-6 flex items-center gap-2"><Wallet className="text-emerald-500"/> Debiti Individuali (€)</h3>
+                    <ResponsiveContainer width="100%" height="85%">
+                        <BarChart data={chartsData.debtData}>
+                           <XAxis dataKey="name" tick={{fontSize: 10}}/>
+                           <YAxis />
+                           <Tooltip />
+                           <Bar dataKey="euro" fill="#10b981" radius={[10, 10, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                 </div>
               </div>
             ) : testView === 'data' ? (
-              <div className="bg-white p-10 rounded-[3rem] border-4 border-rose-100 shadow-2xl text-center">
-                <AlertTriangle size={64} className="mx-auto text-rose-600 mb-4" />
-                <h2 className="text-2xl font-black mb-10">NON TOCCARE SE NON SAI COSA FAI</h2>
-                <button onClick={clearAllData} className="w-full bg-rose-600 text-white py-6 rounded-2xl font-black text-xl">RESET DATI CLOUD</button>
+              <div className="bg-white p-12 rounded-[3.5rem] border-8 border-rose-50 shadow-2xl text-center max-w-2xl mx-auto">
+                <AlertTriangle size={80} className="mx-auto text-rose-500 mb-6" />
+                <h2 className="text-3xl font-black text-slate-800 mb-4 uppercase tracking-tighter">Pannello di Controllo</h2>
+                <p className="text-slate-500 mb-10 font-medium">Il reset cancellerà tutte le disponibilità ma manterrà la lista dello staff.</p>
+                <div className="flex flex-col gap-4">
+                    <button onClick={clearAndFillRandom} className="w-full bg-indigo-600 text-white py-5 rounded-3xl font-black text-xl shadow-xl hover:bg-indigo-700 transition-all">GENERA TEST RANDOM</button>
+                    <button onClick={() => {if(window.confirm("Sicuro?")) updateDatabase({}, [], INITIAL_PEOPLE)}} className="w-full bg-rose-600 text-white py-5 rounded-3xl font-black text-xl shadow-xl hover:bg-rose-700 transition-all">RESET TOTALE DATABASE</button>
+                </div>
               </div>
-            ) : testView === 'matrix' ? (
-              <div className="bg-white rounded-3xl border overflow-x-auto shadow-sm">
-                <table className="w-full text-xs">
-                  <thead className="bg-slate-50"><tr><th className="p-3 text-left sticky left-0 bg-white border-r">Persona</th>{ALL_PERIODS.map((p,i)=><th key={i} className="p-2 border-b min-w-[50px] font-bold">{p.date.split(' ')[1]} {p.slot[0]}</th>)}</tr></thead>
-                  <tbody>{PEOPLE.map(person => <tr key={person} className="border-b"><td className="p-3 font-bold sticky left-0 bg-white border-r">{person}</td>{ALL_PERIODS.map((p,i)=><td key={i} className="text-center">{availabilities[person]?.[p.date]?.[p.slot] && <Check size={14} className="mx-auto text-emerald-500"/>}</td>)}</tr>)}</tbody>
-                </table>
-              </div>
-            ) : testView === 'caranzano' ? (
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {DATES.map(d => (
-                   <div key={d} className="bg-white rounded-[2rem] p-6 border shadow-sm">
-                     <h3 className="text-xl font-black text-slate-800 border-b pb-4 mb-4 uppercase">{d}</h3>
-                     {['Pranzo', 'Cena'].map(meal => (
-                       <div key={meal} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mb-2">
-                         <span className="font-bold text-slate-600">{meal}</span>
-                         <span className="text-3xl font-black text-indigo-600">{countTotal(d, meal)}</span>
-                       </div>
-                     ))}
-                   </div>
-                 ))}
-               </div>
             ) : (
-              <div className="bg-white rounded-3xl border p-6"><table className="w-full text-sm"><thead><tr className="text-xs uppercase text-slate-400 font-black"><th className="text-left p-2">Fascia</th>{DATES.map(d=><th key={d}>{d}</th>)}</tr></thead><tbody>{TIME_SLOTS.map(s=><tr key={s} className="border-t"><td>{s}</td>{DATES.map(d=><td key={d} className="text-center font-black">{countTotal(d,s)}</td>)}</tr>)}</tbody></table></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {DATES.map(d => (
+                    <div key={d} className="bg-white rounded-[2.5rem] p-8 border shadow-sm">
+                      <h3 className="text-2xl font-black text-indigo-900 border-b-4 border-indigo-50 pb-4 mb-6 uppercase tracking-tighter">{d}</h3>
+                      {TIME_SLOTS.map(slot => (
+                        <div key={slot} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl mb-2 hover:bg-indigo-50 transition-colors">
+                          <span className={`font-bold ${['Pranzo','Cena'].includes(slot) ? 'text-indigo-600' : 'text-slate-500'}`}>{slot}</span>
+                          <div className="flex items-center gap-3">
+                             <span className="text-xs font-black text-slate-300 uppercase">Presenti</span>
+                             <span className="text-3xl font-black text-slate-800">{countTotal(d, slot)}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-black uppercase">Disponibilità</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-indigo-600 p-8 rounded-[2.5rem] text-white shadow-2xl">
+                <div>
+                   <h2 className="text-3xl font-black uppercase tracking-tighter">Ciao, {currentUser}!</h2>
+                   <p className="text-indigo-100 font-medium">Seleziona i momenti in cui ci sarai.</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-md p-4 rounded-2xl border border-white/30 flex items-center gap-4">
+                   <div className="bg-white text-indigo-600 p-3 rounded-xl"><Wallet /></div>
+                   <div>
+                      <div className="text-[10px] font-black uppercase opacity-60">Il tuo totale</div>
+                      <div className="text-2xl font-black">{calculateDebt(currentUser)}€ <span className="text-xs opacity-80 font-bold">(5€/pasto)</span></div>
+                   </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {DATES.map(d => (
-                <div key={d} className="bg-white p-6 rounded-3xl border shadow-sm">
-                  <div className="font-black mb-4 uppercase border-b pb-2 text-indigo-600 text-center">{d}</div>
-                  <div className="grid grid-cols-2 gap-2">
+                <div key={d} className="bg-white p-8 rounded-[2.5rem] border shadow-xl">
+                  <div className="font-black mb-6 uppercase border-b-2 pb-4 text-indigo-600 text-center tracking-widest text-lg">{d}</div>
+                  <div className="grid grid-cols-1 gap-3">
                     {TIME_SLOTS.map(s => {
-                      const val = availabilities[currentUser]?.[d]?.[s];
+                      const isSelected = availabilities[currentUser]?.[d]?.[s];
+                      const isMeal = ['Pranzo', 'Cena'].includes(s);
                       return (
-                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`h-12 rounded-xl border-2 text-[10px] font-black uppercase transition-all ${val ? 'bg-emerald-500 border-emerald-400 text-white' : 'text-slate-300 border-slate-50'}`}>{s}</button>
+                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`group relative h-16 rounded-2xl border-2 font-black uppercase transition-all flex items-center px-6 gap-4 ${isSelected ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg scale-[1.02]' : 'bg-white text-slate-300 border-slate-100 hover:border-indigo-200 hover:text-indigo-400'}`}>
+                          <div className={`p-2 rounded-lg ${isSelected ? 'bg-white/20' : 'bg-slate-50'}`}>
+                             {isMeal ? <Utensils size={18}/> : <Clock size={18}/>}
+                          </div>
+                          <span className="flex-1 text-left">{s}</span>
+                          {isSelected && <CheckCircle2 size={24} />}
+                          {isMeal && !isSelected && <span className="text-[10px] bg-slate-100 px-2 py-1 rounded-md text-slate-400">5€</span>}
+                        </button>
                       );
                     })}
                   </div>
                 </div>
               ))}
             </div>
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 border-t flex justify-center z-50">
-              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="w-full max-w-md bg-slate-900 text-white py-4 rounded-2xl font-black">SALVA E ESCI</button>
+            
+            <div className="fixed bottom-8 left-0 right-0 p-4 flex justify-center z-50 no-print">
+              <button onClick={() => { window.scrollTo(0,0); setCurrentUser(null); }} className="w-full max-w-md bg-slate-900 text-white py-6 rounded-3xl font-black text-xl shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-4">SALVA E TORNA ALLA HOME <Check size={28}/></button>
             </div>
           </div>
         )}
