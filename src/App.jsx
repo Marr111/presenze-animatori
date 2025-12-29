@@ -2,7 +2,7 @@ import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Search, Printer, ChevronRight, CheckCircle2, UserPlus,
-  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp
+  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, Activity
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar
@@ -97,6 +97,7 @@ const App = () => {
 
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
+  
   const calculateDebt = (person) => {
     let meals = 0;
     DATES.forEach(d => {
@@ -130,16 +131,12 @@ const App = () => {
                   <ChevronRight className="ml-auto w-4 h-4 text-slate-300" />
                 </button>
               ))}
-              
-              {/* Pulsante aggiunta sempre in fondo o se ricerca vuota */}
               <div className="pt-4 pb-2">
                 <button onClick={addPerson} className="w-full p-4 border-2 border-dashed border-indigo-200 rounded-2xl text-indigo-500 font-black flex items-center justify-center gap-2 hover:bg-indigo-50 transition-all text-sm uppercase">
-                  <UserPlus size={18} />
-                  Aggiungi nuovo nome
+                  <UserPlus size={18} /> Aggiungi nuovo nome
                 </button>
               </div>
             </div>
-            
             <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-colors">Admin Access</button>
           </div>
 
@@ -155,7 +152,6 @@ const App = () => {
                   <p className="text-slate-700 font-bold text-sm leading-tight italic">"{idea.text}"</p>
                 </div>
               ))}
-              {ideas.length === 0 && <p className="text-center text-slate-300 font-bold py-10">Ancora nessuna idea...</p>}
             </div>
           </div>
         </div>
@@ -170,7 +166,6 @@ const App = () => {
       <style>{`
         @media print { @page { size: landscape; } nav, .no-print { display: none !important; } .print-area { display: block !important; width: 100% !important; border: none !important; } table { font-size: 8px !important; } }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
       `}</style>
       
@@ -223,22 +218,16 @@ const App = () => {
             ) : testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="bg-white p-6 rounded-3xl border flex flex-col items-center shadow-sm">
-                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Affluenza Personale</h3>
-                  <AreaChart width={450} height={250} data={chartsData.timeline} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Affluenza</h3>
+                  <AreaChart width={450} height={250} data={chartsData.timeline}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" strokeWidth={3} fill="#6366f122"/>
                   </AreaChart>
                 </div>
                 <div className="bg-white p-6 rounded-3xl border flex flex-col items-center shadow-sm">
-                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Pasti da Pagare (€)</h3>
+                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Debiti (€)</h3>
                   <BarChart width={450} height={250} data={chartsData.debtData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[5,5,0,0]}/>
                   </BarChart>
-                </div>
-                <div className="bg-white p-6 rounded-3xl border flex flex-col items-center col-span-1 md:col-span-2 shadow-sm">
-                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Copertura Fasce Orarie</h3>
-                  <RadarChart cx={225} cy={125} outerRadius={80} width={450} height={250} data={chartsData.radar}>
-                    <PolarGrid/><PolarAngleAxis dataKey="subject"/><Radar name="Copertura" dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/>
-                  </RadarChart>
                 </div>
               </div>
             ) : testView === 'caranzano' ? (
@@ -273,11 +262,16 @@ const App = () => {
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
+            {/* BOX COSTI AGGIORNATO COME DA RICHIESTA */}
             <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white flex justify-between items-center shadow-xl relative overflow-hidden">
-              <div className="relative z-10"><h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2><p className="opacity-80 font-medium">Seleziona le tue disponibilità</p></div>
-              <div className="text-right bg-white/10 backdrop-blur-md p-5 rounded-[1.5rem] border border-white/20 relative z-10 shadow-lg">
-                <div className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Pasti Totali</div>
+              <div className="relative z-10">
+                <h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2>
+                <p className="opacity-80 font-medium tracking-tight">Inserisci le tue disponibilità per il Triduo</p>
+              </div>
+              <div className="text-right bg-white/10 backdrop-blur-md p-6 rounded-[2rem] border border-white/20 relative z-10 shadow-lg min-w-[140px]">
+                <div className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Costo Totale</div>
                 <div className="text-4xl font-black">{calculateDebt(currentUser)}€</div>
+                <div className="text-[9px] font-bold uppercase opacity-80 mt-1">({MEAL_PRICE}€ a pasto)</div>
               </div>
               <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/5 rounded-full"></div>
             </div>
