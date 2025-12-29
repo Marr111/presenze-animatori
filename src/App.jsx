@@ -37,10 +37,13 @@ const App = () => {
     try {
       const response = await fetch('/api/get-data');
       const result = await response.json();
+      
+      // Correzione: result contiene già availabilities e ideas se usi il nuovo backend
       setAvailabilities(result.availabilities || {});
       setIdeas(result.ideas || []);
-      if (result.people && result.people.length > 0) setPeople(result.people);
-    } catch (e) { console.error("Errore caricamento dati"); }
+    } catch (e) { 
+      console.error("Errore caricamento:", e); 
+    }
   };
 
   useEffect(() => {
