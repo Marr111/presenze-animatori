@@ -1,19 +1,22 @@
 import { Redis } from '@upstash/redis'
 
-const redis = Redis.fromEnv()
+const redis = new Redis({
+  url: process.env.REDIS_URL,
+  token: process.env.REDIS_URL,
+})
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
-  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
   try {
-    const { key, data } = req.body;
-    
-    // Salva i dati su Upstash
-    await redis.set(key, JSON.stringify(data));
-    
+    const newData = req.body;
+    // Salva i dati nel database
+    await redis.set('staff_presence', newData);
     return res.status(200).json({ success: true });
   } catch (error) {
-    console.error("Errore salvataggio Upstash:", error);
+    console.error(error);
     return res.status(500).json({ error: error.message });
   }
 }
