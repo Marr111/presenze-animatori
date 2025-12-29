@@ -30,13 +30,17 @@ const App = () => {
   const [testView, setTestView] = useState('summary'); 
 
   // --- LOGICA SINCRONIZZAZIONE ---
-  const loadData = async () => {
+const loadData = async () => {
     try {
       const response = await fetch('/api/get-data');
       const result = await response.json();
+      
+      // Correzione: result contiene già availabilities e ideas se usi il nuovo backend
       setAvailabilities(result.availabilities || {});
       setIdeas(result.ideas || []);
-    } catch (e) { console.error("Database non connesso"); }
+    } catch (e) { 
+      console.error("Errore caricamento:", e); 
+    }
   };
 
   useEffect(() => {
