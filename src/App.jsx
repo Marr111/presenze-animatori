@@ -262,7 +262,6 @@ const App = () => {
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
-            {/* BOX COSTI AGGIORNATO COME DA RICHIESTA */}
             <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white flex justify-between items-center shadow-xl relative overflow-hidden">
               <div className="relative z-10">
                 <h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2>
@@ -283,9 +282,18 @@ const App = () => {
                   <div className="space-y-2">
                     {TIME_SLOTS.map(s => {
                       const active = availabilities[currentUser]?.[d]?.[s];
+                      const isMeal = ['Pranzo', 'Cena'].includes(s);
                       return (
-                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`w-full py-5 rounded-[1.2rem] font-black uppercase transition-all flex items-center justify-between px-5 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200'}`}>
-                          <div className="flex items-center gap-3 text-xs tracking-tight">{['Pranzo','Cena'].includes(s) ? <Utensils size={14}/> : <Clock size={14}/>} {s}</div>
+                        <button 
+                          key={s} 
+                          onClick={() => toggleAvailability(d, s)} 
+                          className={`w-full py-5 rounded-[1.2rem] font-black uppercase transition-all flex items-center justify-between px-5 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200'}`}
+                        >
+                          <div className="flex items-center gap-3 text-xs tracking-tight">
+                            {isMeal ? <Utensils size={14}/> : <Clock size={14}/>} 
+                            <span>{s}</span>
+                            {isMeal && !active && <span className="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-md border border-slate-200">+5€</span>}
+                          </div>
                           {active && <CheckCircle2 size={20}/>}
                         </button>
                       );
