@@ -1,4 +1,6 @@
-import { kv } from '@vercel/kv';
+import { Redis } from '@upstash/redis'
+
+const kv = Redis.fromEnv(); // Questo cercherà UPSTASH_REDIS_REST_URL e TOKEN
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
