@@ -2,15 +2,17 @@ import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Search, Printer, ChevronRight, CheckCircle2, UserPlus,
-  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, Activity
+  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, Activity, BarChart3, PieChart as PieIcon
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts';
 
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
+const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
+
 const INITIAL_PEOPLE = [
   'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
@@ -29,6 +31,7 @@ const App = () => {
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
 
+  // --- SINCRONIZZAZIONE ---
   const loadData = async () => {
     try {
       const response = await fetch('/api/get-data');
@@ -90,14 +93,14 @@ const App = () => {
       ...prev,
       [currentUser]: { 
         ...prev[currentUser], 
-        [date]: { ...prev[currentUser]?.[date], [slot]: !prev[currentUser]?.[date]?.[slot] } 
+        [date]: { ...prev[prev[currentUser]]?.[date], [slot]: !prev[currentUser]?.[date]?.[slot] } 
       }
     }));
   };
 
+  // --- UTILITY ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
-  
   const calculateDebt = (person) => {
     let meals = 0;
     DATES.forEach(d => {
@@ -107,11 +110,48 @@ const App = () => {
     return meals * MEAL_PRICE;
   };
 
+  // --- PREPARAZIONE DATI 8 GRAFICI ---
   const chartsData = useMemo(() => {
+    // 1. Timeline Affluenza
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
-    const debtData = people.map(p => ({ name: p.split(' ')[0], euro: calculateDebt(p) })).filter(d => d.euro > 0);
+    
+    // 2. Mix Pasti (Pie)
+    const mealsMix = [
+      { name: 'Pranzi', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo'), 0) },
+      { name: 'Cene', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Cena'), 0) }
+    ];
+
+    // 3. Impegni per Persona (Bar)
+    const staffActivity = people.map(p => {
+      let count = 0;
+      DATES.forEach(d => TIME_SLOTS.forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
+      return { name: p.split(' ')[0], impegni: count };
+    });
+
+    // 4. Copertura Fasce (Radar)
     const radar = TIME_SLOTS.map(s => ({ subject: s, A: DATES.reduce((acc, d) => acc + countTotal(d, s), 0) }));
-    return { timeline, debtData, radar };
+
+    // 5. Debiti (€)
+    const debtData = people.map(p => ({ name: p.split(' ')[0], euro: calculateDebt(p) })).filter(d => d.euro > 0);
+
+    // 6. Affluenza per Giorno
+    const dailyTotal = DATES.map(d => ({ name: d, totale: TIME_SLOTS.reduce((acc, s) => acc + countTotal(d, s), 0) }));
+
+    // 7. Tipologia Fasce (Pasti vs Altro)
+    const categoryMix = [
+      { name: 'Fasce Pasti', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo') + countTotal(d, 'Cena'), 0) },
+      { name: 'Altre Fasce', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Mattino') + countTotal(d, 'Pomeriggio') + countTotal(d, 'Sera') + countTotal(d, 'Notte'), 0) }
+    ];
+
+    // 8. Andamento Giornaliero (Line)
+    const lineData = DATES.map(d => ({ 
+      name: d.split(' ')[1], 
+      Mattino: countTotal(d, 'Mattino'),
+      Pomeriggio: countTotal(d, 'Pomeriggio'),
+      Sera: countTotal(d, 'Sera')
+    }));
+
+    return { timeline, mealsMix, staffActivity, radar, debtData, dailyTotal, categoryMix, lineData };
   }, [availabilities, people]);
 
   if (!currentUser) {
@@ -122,7 +162,6 @@ const App = () => {
           <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px] border">
             <h2 className="text-xl font-black mb-6">Chi sei?</h2>
             <input type="text" placeholder="Cerca il tuo nome..." className="w-full px-4 py-3 bg-slate-50 rounded-2xl mb-4 border outline-none focus:border-indigo-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            
             <div className="flex-1 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
               {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
                 <button key={p} onClick={() => { setCurrentUser(p); loadData(); }} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100">
@@ -139,12 +178,11 @@ const App = () => {
             </div>
             <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-colors">Admin Access</button>
           </div>
-
           <div className="bg-white rounded-[2.5rem] shadow-xl p-6 flex flex-col h-[550px] border">
-            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb className="text-amber-500" /> Idee e Note</h2>
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2"><Lightbulb className="text-amber-500" /> Idee</h2>
             <div className="flex gap-2 mb-4">
-              <input type="text" placeholder="Scrivi un'idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl border outline-none focus:border-indigo-400" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} />
-              <button onClick={addIdea} className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-colors"><Send size={18} /></button>
+              <input type="text" placeholder="Nuova idea..." className="flex-1 px-4 py-3 bg-slate-50 rounded-2xl border outline-none" value={newIdea} onChange={(e) => setNewIdea(e.target.value)} />
+              <button onClick={addIdea} className="p-3 bg-indigo-600 text-white rounded-2xl"><Send size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
               {ideas.map(idea => (
@@ -179,7 +217,7 @@ const App = () => {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         {isAdmin ? (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="flex gap-2 flex-wrap no-print items-center">
               {['summary', 'caranzano', 'matrix', 'charts'].map(v => (
                 <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${testView === v ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border text-slate-400 hover:bg-slate-50'}`}>{v}</button>
@@ -216,18 +254,66 @@ const App = () => {
                 </table>
               </div>
             ) : testView === 'charts' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                <div className="bg-white p-6 rounded-3xl border flex flex-col items-center shadow-sm">
-                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Affluenza</h3>
-                  <AreaChart width={450} height={250} data={chartsData.timeline}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" strokeWidth={3} fill="#6366f122"/>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Affluenza Timeline */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">1. Andamento Presenze</h3>
+                  <AreaChart width={300} height={180} data={chartsData.timeline}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/>
                   </AreaChart>
                 </div>
-                <div className="bg-white p-6 rounded-3xl border flex flex-col items-center shadow-sm">
-                  <h3 className="text-xs font-black mb-6 uppercase tracking-widest text-slate-400">Debiti (€)</h3>
-                  <BarChart width={450} height={250} data={chartsData.debtData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name"/><YAxis/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[5,5,0,0]}/>
+                {/* 2. Mix Pasti */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">2. Bilancio Pasti</h3>
+                  <PieChart width={300} height={180}>
+                    <Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
+                      {chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                    </Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/>
+                  </PieChart>
+                </div>
+                {/* 3. Impegni Staff */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">3. Classifica Impegni</h3>
+                  <BarChart width={300} height={180} data={chartsData.staffActivity.slice(0, 6)}>
+                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/>
                   </BarChart>
+                </div>
+                {/* 4. Radar Copertura */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">4. Analisi Fasce Orarie</h3>
+                  <RadarChart cx={150} cy={90} outerRadius={60} width={300} height={180} data={chartsData.radar}>
+                    <PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/>
+                  </RadarChart>
+                </div>
+                {/* 5. Debiti (€) */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">5. Stato Pagamenti</h3>
+                  <BarChart width={300} height={180} data={chartsData.debtData}>
+                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/>
+                  </BarChart>
+                </div>
+                {/* 6. Affluenza Giorno */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">6. Volume per Giorno</h3>
+                  <BarChart width={300} height={180} data={chartsData.dailyTotal}>
+                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/>
+                  </BarChart>
+                </div>
+                {/* 7. Mix Categorie */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">7. Tipologia Attività</h3>
+                  <PieChart width={300} height={180}>
+                    <Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
+                      {chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}
+                    </Pie><Tooltip/>
+                  </PieChart>
+                </div>
+                {/* 8. Trend Fasce Principali */}
+                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">8. Trend Giornaliero</h3>
+                  <LineChart width={300} height={180} data={chartsData.lineData}>
+                    <CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" />
+                  </LineChart>
                 </div>
               </div>
             ) : testView === 'caranzano' ? (
@@ -247,7 +333,7 @@ const App = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {DATES.map(d => (
-                  <div key={d} className="bg-white rounded-3xl p-6 border shadow-sm">
+                  <div key={d} className="bg-white rounded-3xl p-6 border shadow-sm text-center">
                     <h3 className="font-black text-indigo-600 border-b pb-2 mb-4 uppercase text-center tracking-tighter">{d}</h3>
                     {TIME_SLOTS.map(s => (
                       <div key={s} className="flex justify-between py-2 border-b last:border-0 border-slate-50">
@@ -262,6 +348,7 @@ const App = () => {
           </div>
         ) : (
           <div className="space-y-6 max-w-4xl mx-auto">
+            {/* BOX COSTI RIEPILOGO */}
             <div className="bg-indigo-600 p-8 rounded-[2.5rem] text-white flex justify-between items-center shadow-xl relative overflow-hidden">
               <div className="relative z-10">
                 <h2 className="text-2xl font-black uppercase">Ciao, {currentUser}</h2>
@@ -284,11 +371,7 @@ const App = () => {
                       const active = availabilities[currentUser]?.[d]?.[s];
                       const isMeal = ['Pranzo', 'Cena'].includes(s);
                       return (
-                        <button 
-                          key={s} 
-                          onClick={() => toggleAvailability(d, s)} 
-                          className={`w-full py-5 rounded-[1.2rem] font-black uppercase transition-all flex items-center justify-between px-5 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200'}`}
-                        >
+                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`w-full py-5 rounded-[1.2rem] font-black uppercase transition-all flex items-center justify-between px-5 border-2 ${active ? 'bg-emerald-500 border-emerald-400 text-white shadow-md' : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200'}`}>
                           <div className="flex items-center gap-3 text-xs tracking-tight">
                             {isMeal ? <Utensils size={14}/> : <Clock size={14}/>} 
                             <span>{s}</span>
