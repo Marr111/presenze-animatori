@@ -1,9 +1,9 @@
 import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Check, LogOut, Search, Printer, ChevronRight, CheckCircle2, UserPlus,
-  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, 
-  Activity, BarChart3, PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Users, Sparkles
+  Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
+  Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
+  PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
@@ -33,7 +33,10 @@ const App = () => {
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [notifyStatus, setNotifyStatus] = useState("idle"); // idle, sending, sent
+  const [notifyStatus, setNotifyStatus] = useState("idle");
+  
+  // Stato per il caricamento sequenziale dei grafici
+  const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
   // --- SINCRONIZZAZIONE ---
   const loadData = async () => {
@@ -45,7 +48,7 @@ const App = () => {
         setIdeas(result.ideas || []);
         if (result.people && result.people.length > 0) setPeople(result.people);
       }
-    } catch (e) { console.error("Errore sync"); }
+    } catch (e) { console.error("Errore sync", e); }
   };
 
   useEffect(() => {
@@ -56,7 +59,7 @@ const App = () => {
     return () => clearInterval(interval);
   }, [currentUser]);
 
-  // Gestione classe dark mode sul body/container
+  // Gestione classe dark mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -64,6 +67,21 @@ const App = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Gestione caricamento grafici sequenziale
+  useEffect(() => {
+    if (testView === 'charts') {
+      setVisibleChartsCount(0); // Reset
+      const interval = setInterval(() => {
+        setVisibleChartsCount(prev => {
+          if (prev < 8) return prev + 1; // Ci sono 8 grafici totali
+          clearInterval(interval);
+          return prev;
+        });
+      }, 500); // Carica un grafico ogni mezzo secondo
+      return () => clearInterval(interval);
+    }
+  }, [testView]);
 
   const persistToCloud = async (updatedData) => {
     setIsSaving(true);
@@ -73,7 +91,7 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: updatedData }),
       });
-    } catch (e) { console.error("Errore salvataggio"); }
+    } catch (e) { console.error("Errore salvataggio", e); }
     setIsSaving(false);
   };
 
@@ -101,14 +119,23 @@ const App = () => {
     await persistToCloud({ availabilities, ideas: newIdeas, people });
   };
 
+  // --- CORREZIONE BUG SELEZIONE MULTIPLA ---
   const toggleAvailability = (date, slot) => {
-    setAvailabilities(prev => ({
-      ...prev,
-      [currentUser]: { 
-        ...prev[currentUser], 
-        [date]: { ...prev[prev[currentUser]]?.[date], [slot]: !prev[currentUser]?.[date]?.[slot] } 
-      }
-    }));
+    setAvailabilities(prev => {
+      const userAvail = prev[currentUser] || {};
+      const dayAvail = userAvail[date] || {};
+      
+      return {
+        ...prev,
+        [currentUser]: { 
+          ...userAvail, 
+          [date]: { 
+            ...dayAvail, // Mantiene le altre selezioni di quel giorno!
+            [slot]: !dayAvail[slot] 
+          } 
+        }
+      };
+    });
   };
 
   const handleNotification = () => {
@@ -160,27 +187,19 @@ const App = () => {
 
     DATES.forEach(date => {
       ['Pranzo', 'Cena'].forEach(slot => {
-        // Chi è presente a questo pasto?
         const presentPeople = people.filter(p => availabilities[p]?.[date]?.[slot]);
-        
-        // Ordina: prima chi ha lavato meno, poi random per parità
         const sortedCandidates = [...presentPeople].sort((a, b) => {
           const countDiff = washCounts[a] - washCounts[b];
           if (countDiff !== 0) return countDiff;
-          return 0.5 - Math.random(); // Random shuffle on tie
+          return 0.5 - Math.random();
         });
-
-        // Prendi i primi 3
         const crew = sortedCandidates.slice(0, 3);
-        
-        // Aggiorna contatori
         crew.forEach(p => washCounts[p]++);
-        
         schedule.push({ date, slot, crew, totalPresent: presentPeople.length });
       });
     });
     return schedule;
-  }, [people, availabilities]); // Ricalcola solo se cambiano dati
+  }, [people, availabilities]);
 
   // --- PREPARAZIONE DATI GRAFICI ---
   const chartsData = useMemo(() => {
@@ -210,14 +229,21 @@ const App = () => {
     return { timeline, mealsMix, staffActivity, radar, debtData, dailyTotal, categoryMix, lineData };
   }, [availabilities, people]);
 
-  // --- TEMA E STILI ---
-  const themeClasses = darkMode 
-    ? "bg-slate-900 text-white" 
-    : "bg-slate-50 text-slate-800";
-  const cardClasses = darkMode
-    ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20"
-    : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
+  const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
+  const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
+  // Lista definizioni grafici per il render sequenziale
+  const chartDefinitions = [
+    { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
+    { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
+    { title: "3. Classifica Impegni", chart: <BarChart data={chartsData.staffActivity.slice(0, 6)}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/></BarChart> },
+    { title: "4. Analisi Fasce Orarie", chart: <RadarChart cx="50%" cy="50%" outerRadius="60%" data={chartsData.radar}><PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/></RadarChart> },
+    { title: "5. Stato Pagamenti", chart: <BarChart data={chartsData.debtData}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/></BarChart> },
+    { title: "6. Volume per Giorno", chart: <BarChart data={chartsData.dailyTotal}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/></BarChart> },
+    { title: "7. Tipologia Attività", chart: <PieChart><Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}</Pie><Tooltip/></PieChart> },
+    { title: "8. Trend Giornaliero", chart: <LineChart data={chartsData.lineData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" /></LineChart> }
+  ];
+
   if (!currentUser) {
     return (
       <div className={`min-h-screen p-4 flex flex-col items-center justify-center transition-colors duration-300 ${themeClasses}`}>
@@ -341,21 +367,17 @@ const App = () => {
               </div>
             ) : testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {/* Reusable Chart Card */}
-                 {[
-                   { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
-                   { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
-                   { title: "3. Classifica Impegni", chart: <BarChart data={chartsData.staffActivity.slice(0, 6)}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/></BarChart> },
-                   { title: "4. Analisi Fasce Orarie", chart: <RadarChart cx="50%" cy="50%" outerRadius="60%" data={chartsData.radar}><PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/></RadarChart> },
-                   { title: "5. Stato Pagamenti", chart: <BarChart data={chartsData.debtData}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/></BarChart> },
-                   { title: "6. Volume per Giorno", chart: <BarChart data={chartsData.dailyTotal}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/></BarChart> },
-                   { title: "7. Tipologia Attività", chart: <PieChart><Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}</Pie><Tooltip/></PieChart> },
-                   { title: "8. Trend Giornaliero", chart: <LineChart data={chartsData.lineData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" /></LineChart> }
-                 ].map((c, i) => (
-                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
+                 {chartDefinitions.map((c, i) => (
+                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center min-h-[220px]`}>
                       <h3 className="text-[10px] font-black mb-4 uppercase opacity-50 tracking-widest">{c.title}</h3>
                       <ResponsiveContainer width="100%" height={180}>
-                        {c.chart}
+                        {i <= visibleChartsCount ? (
+                           c.chart
+                        ) : (
+                           <div className="w-full h-full flex items-center justify-center animate-pulse">
+                              <span className="text-xs font-bold opacity-30">Caricamento grafico...</span>
+                           </div>
+                        )}
                       </ResponsiveContainer>
                     </div>
                  ))}
