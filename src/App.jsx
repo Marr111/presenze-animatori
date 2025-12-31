@@ -4,7 +4,7 @@ import {
   Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
   PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays,
-  Trash2, Database, Skull
+  Trash2, Database, Skull, Settings, Save
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
@@ -50,7 +50,6 @@ const App = () => {
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [notifyStatus, setNotifyStatus] = useState("idle");
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
   // --- SINCRONIZZAZIONE DATI ---
@@ -73,7 +72,7 @@ const App = () => {
   useEffect(() => {
     loadData();
     const interval = setInterval(() => {
-      if (!currentUser) loadData(); // Aggiorna solo se non si sta scrivendo
+      if (!currentUser) loadData(); 
     }, 10000);
     return () => clearInterval(interval);
   }, [currentUser]);
@@ -120,20 +119,20 @@ const App = () => {
     setSearchTerm("");
   };
 
-  // --- DEBUG & TEST FUNCTIONS ---
+  // --- AZIONI DATABASE (TEST & RESET) ---
   const handleResetData = async () => {
-    if (confirm("ATTENZIONE: Stai per cancellare TUTTI i dati (presenze e idee). Sei sicuro?")) {
+    if (confirm("ATTENZIONE ESTREMA:\n\nStai per cancellare TUTTI i dati (presenze e idee) definitivamente.\nQuesta azione non è reversibile.\n\nSei sicuro di voler procedere?")) {
       const emptyData = { availabilities: {}, ideas: [], people: INITIAL_PEOPLE };
       setAvailabilities({});
       setIdeas([]);
       setPeople(INITIAL_PEOPLE);
       await persistToCloud(emptyData);
-      alert("Database resettato!");
+      alert("Database resettato con successo.");
     }
   };
 
   const handleGenerateRandomData = async () => {
-    if (confirm("Generare dati casuali per testare i grafici? Sovrascriverà le selezioni attuali.")) {
+    if (confirm("Questa azione SOVRASCRIVERÀ le selezioni attuali con dati casuali per testare i grafici.\n\nVuoi continuare?")) {
       const newAvail = {};
       people.forEach(person => {
         newAvail[person] = {};
@@ -149,7 +148,7 @@ const App = () => {
       });
       setAvailabilities(newAvail);
       await persistToCloud({ availabilities: newAvail, ideas, people });
-      alert("Dati casuali generati!");
+      alert("Dati di test generati!");
     }
   };
 
@@ -292,7 +291,6 @@ const App = () => {
   const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
   const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
-  // Lista Grafici (con ResponsiveContainer configurato correttamente)
   const chartDefinitions = [
     { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
     { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
@@ -386,7 +384,7 @@ const App = () => {
         {isAdmin ? (
           <div className="space-y-8">
             <div className="flex gap-2 flex-wrap no-print items-center bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl">
-              {['summary', 'caranzano', 'matrix', 'charts', 'dishes'].map(v => (
+              {['summary', 'caranzano', 'matrix', 'charts', 'dishes', 'database'].map(v => (
                 <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${testView === v ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white dark:hover:bg-slate-700'}`}>{v === 'dishes' ? 'Turni Piatti' : v}</button>
               ))}
               <div className="ml-auto flex gap-2">
@@ -395,26 +393,42 @@ const App = () => {
               </div>
             </div>
 
-            {/* --- ZONA PERICOLOSA (TEST) --- */}
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded-3xl p-4 flex items-center justify-between flex-wrap gap-4 no-print">
-              <div className="flex items-center gap-3">
-                 <div className="bg-red-100 dark:bg-red-900 p-2 rounded-xl text-red-600 dark:text-red-300">
-                    <Skull size={24} />
+            {/* SEZIONE DATABASE (NUOVA TAB) */}
+            {testView === 'database' && (
+              <div className="max-w-3xl mx-auto space-y-6">
+                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900 p-6 rounded-3xl flex items-start gap-4">
+                    <div className="bg-amber-100 dark:bg-amber-900 p-3 rounded-2xl text-amber-600 dark:text-amber-300">
+                      <Settings size={32}/>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-amber-700 dark:text-amber-400 mb-2">Pannello di Controllo</h3>
+                      <p className="text-sm opacity-80 leading-relaxed">Da qui puoi gestire le operazioni delicate sul database. Queste operazioni influenzano tutti gli utenti e non possono essere annullate facilmente. Procedi con cautela.</p>
+                    </div>
                  </div>
-                 <div>
-                    <h3 className="font-black text-red-600 dark:text-red-300 text-sm uppercase">Zona Pericolo (Debug)</h3>
-                    <p className="text-[10px] text-red-400 font-bold">Usare solo se si sa cosa si sta facendo.</p>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button onClick={handleGenerateRandomData} className="group relative overflow-hidden bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition-all text-left shadow-lg hover:shadow-indigo-500/20">
+                       <div className="flex items-center gap-3 mb-4 text-indigo-500">
+                          <Database size={24}/>
+                          <span className="font-black uppercase tracking-widest text-xs">Test Mode</span>
+                       </div>
+                       <h4 className="text-lg font-bold mb-2">Genera Dati Random</h4>
+                       <p className="text-xs opacity-60">Riempie il calendario con dati casuali per testare grafici e statistiche. Sovrascrive i dati esistenti.</p>
+                       <div className="absolute bottom-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500 font-black text-xs uppercase flex items-center gap-1">Esegui <ChevronRight size={14}/></div>
+                    </button>
+
+                    <button onClick={handleResetData} className="group relative overflow-hidden bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-red-500 transition-all text-left shadow-lg hover:shadow-red-500/20">
+                       <div className="flex items-center gap-3 mb-4 text-red-500">
+                          <Skull size={24}/>
+                          <span className="font-black uppercase tracking-widest text-xs">Danger Zone</span>
+                       </div>
+                       <h4 className="text-lg font-bold mb-2">Reset Totale</h4>
+                       <p className="text-xs opacity-60">Cancella ogni singola presenza, idea e dato inserito. Riporta l'app allo stato iniziale vuoto.</p>
+                       <div className="absolute bottom-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity text-red-500 font-black text-xs uppercase flex items-center gap-1">Distruggi Tutto <Trash2 size={14}/></div>
+                    </button>
                  </div>
               </div>
-              <div className="flex gap-2">
-                <button onClick={handleGenerateRandomData} className="px-4 py-2 bg-white dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:bg-red-50 transition-colors">
-                   <Database size={14}/> Genera Dati Random
-                </button>
-                <button onClick={handleResetData} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30">
-                   <Trash2 size={14}/> RESET TOTALE
-                </button>
-              </div>
-            </div>
+            )}
 
             {testView === 'matrix' ? (
               <div className={`rounded-3xl border shadow-xl overflow-hidden print-area ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
@@ -507,7 +521,7 @@ const App = () => {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : testView === 'summary' && (
               // SUMMARY VIEW
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {DATES.map(d => (
