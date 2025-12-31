@@ -4,7 +4,7 @@ import {
   Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
   PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays,
-  Trash2, Database, Skull, Settings, Save
+  Trash2, Database, Skull, Settings, X
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
@@ -139,7 +139,6 @@ const App = () => {
         DATES.forEach(d => {
           newAvail[person][d] = {};
           TIME_SLOTS.forEach(s => {
-            // 30% di probabilità di essere presente
             if (Math.random() > 0.7) {
               newAvail[person][d][s] = true;
             }
@@ -169,6 +168,15 @@ const App = () => {
     setIdeas(newIdeas);
     setNewIdea("");
     await persistToCloud({ availabilities, ideas: newIdeas, people });
+  };
+
+  // --- NUOVA FUNZIONE: CANCELLA IDEA ---
+  const deleteIdea = async (id) => {
+    if (confirm("Vuoi davvero cancellare questa idea?")) {
+      const updatedIdeas = ideas.filter(idea => idea.id !== id);
+      setIdeas(updatedIdeas);
+      await persistToCloud({ availabilities, ideas: updatedIdeas, people });
+    }
   };
 
   const toggleAvailability = (date, slot) => {
@@ -345,8 +353,11 @@ const App = () => {
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar z-10">
               {ideas.map(idea => (
-                <div key={idea.id} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-indigo-50 border-indigo-100'}`}>
+                <div key={idea.id} className={`p-4 rounded-2xl shadow-sm border flex justify-between items-center group ${darkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-indigo-50 border-indigo-100'}`}>
                   <p className="font-bold text-sm leading-tight italic opacity-90">"{idea.text}"</p>
+                  <button onClick={() => deleteIdea(idea.id)} className="ml-2 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1" title="Cancella">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               ))}
             </div>
