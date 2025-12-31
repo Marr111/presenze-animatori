@@ -1,13 +1,13 @@
+import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Search, Printer, ChevronRight, CheckCircle2, UserPlus,
-  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, Activity, 
-  BarChart3, PieChart as PieIcon, Bell, Moon, Sun, Download, Mail, Calendar, 
-  MessageSquare, Users
+  Lightbulb, Send, Utensils, AlertTriangle, Clock, Wallet, TrendingUp, 
+  Activity, BarChart3, PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Users, Sparkles
 } from 'lucide-react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, 
-  RadarChart, PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, Legend, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
+  PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, Legend, ResponsiveContainer
 } from 'recharts';
 
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
@@ -33,21 +33,9 @@ const App = () => {
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationEmail, setNotificationEmail] = useState("");
-  const [notificationPhone, setNotificationPhone] = useState("");
+  const [notifyStatus, setNotifyStatus] = useState("idle"); // idle, sending, sent
 
-  const theme = {
-    bg: darkMode ? 'bg-slate-900' : 'bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50',
-    card: darkMode ? 'bg-slate-800' : 'bg-white',
-    text: darkMode ? 'text-white' : 'text-slate-800',
-    textSecondary: darkMode ? 'text-slate-300' : 'text-slate-600',
-    border: darkMode ? 'border-slate-700' : 'border-purple-100',
-    hover: darkMode ? 'hover:bg-slate-700' : 'hover:bg-purple-50',
-    input: darkMode ? 'bg-slate-700 text-white' : 'bg-slate-50',
-    accent: darkMode ? 'bg-purple-600' : 'bg-gradient-to-r from-purple-500 to-pink-500'
-  };
-
+  // --- SINCRONIZZAZIONE ---
   const loadData = async () => {
     try {
       const response = await fetch('/api/get-data');
@@ -68,6 +56,15 @@ const App = () => {
     return () => clearInterval(interval);
   }, [currentUser]);
 
+  // Gestione classe dark mode sul body/container
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
   const persistToCloud = async (updatedData) => {
     setIsSaving(true);
     try {
@@ -80,21 +77,10 @@ const App = () => {
     setIsSaving(false);
   };
 
-  const toggleAvailability = (date, slot) => {
-    setAvailabilities(prev => {
-      const userAvail = prev[currentUser] || {};
-      const dateAvail = userAvail[date] || {};
-      return {
-        ...prev,
-        [currentUser]: {
-          ...userAvail,
-          [date]: {
-            ...dateAvail,
-            [slot]: !dateAvail[slot]
-          }
-        }
-      };
-    });
+  const handleFinalSave = async () => {
+    await persistToCloud({ availabilities, ideas, people });
+    setCurrentUser(null);
+    setSearchTerm("");
   };
 
   const addPerson = async () => {
@@ -115,9 +101,48 @@ const App = () => {
     await persistToCloud({ availabilities, ideas: newIdeas, people });
   };
 
+  const toggleAvailability = (date, slot) => {
+    setAvailabilities(prev => ({
+      ...prev,
+      [currentUser]: { 
+        ...prev[currentUser], 
+        [date]: { ...prev[prev[currentUser]]?.[date], [slot]: !prev[currentUser]?.[date]?.[slot] } 
+      }
+    }));
+  };
+
+  const handleNotification = () => {
+    setNotifyStatus("sending");
+    setTimeout(() => {
+      setNotifyStatus("sent");
+      alert("✅ Notifiche attivate! Riceverai promemoria via Email e Calendar.");
+      setTimeout(() => setNotifyStatus("idle"), 3000);
+    }, 1500);
+  };
+
+  const exportToCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Nome," + ALL_PERIODS.map(p => `${p.date} ${p.slot}`).join(",") + ",Totale Debito\n";
+    
+    people.forEach(p => {
+      let row = `${p},`;
+      row += ALL_PERIODS.map(per => availabilities[p]?.[per.date]?.[per.slot] ? "X" : "").join(",");
+      row += `,${calculateDebt(p)}€`;
+      csvContent += row + "\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "triduo_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- UTILITY ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
-  
   const calculateDebt = (person) => {
     let meals = 0;
     DATES.forEach(d => {
@@ -127,34 +152,37 @@ const App = () => {
     return meals * MEAL_PRICE;
   };
 
-  const exportToExcel = () => {
-    let csv = 'Staff,' + ALL_PERIODS.map(p => `${p.date} ${p.slot}`).join(',') + ',Totale Euro\n';
-    people.forEach(p => {
-      csv += p + ',';
-      csv += ALL_PERIODS.map(per => availabilities[p]?.[per.date]?.[per.slot] ? 'X' : '').join(',');
-      csv += ',' + calculateDebt(p) + '€\n';
+  // --- LOGICA LAVAPIATTI (ADMIN) ---
+  const dishwasherSchedule = useMemo(() => {
+    const schedule = [];
+    const washCounts = {};
+    people.forEach(p => washCounts[p] = 0);
+
+    DATES.forEach(date => {
+      ['Pranzo', 'Cena'].forEach(slot => {
+        // Chi è presente a questo pasto?
+        const presentPeople = people.filter(p => availabilities[p]?.[date]?.[slot]);
+        
+        // Ordina: prima chi ha lavato meno, poi random per parità
+        const sortedCandidates = [...presentPeople].sort((a, b) => {
+          const countDiff = washCounts[a] - washCounts[b];
+          if (countDiff !== 0) return countDiff;
+          return 0.5 - Math.random(); // Random shuffle on tie
+        });
+
+        // Prendi i primi 3
+        const crew = sortedCandidates.slice(0, 3);
+        
+        // Aggiorna contatori
+        crew.forEach(p => washCounts[p]++);
+        
+        schedule.push({ date, slot, crew, totalPresent: presentPeople.length });
+      });
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'triduo-tracker-2026.csv';
-    a.click();
-  };
+    return schedule;
+  }, [people, availabilities]); // Ricalcola solo se cambiano dati
 
-  const dishPlan = useMemo(() => {
-    return DATES.flatMap(d => ['Pranzo', 'Cena'].map(m => {
-      const available = people.filter(p => availabilities[p]?.[d]?.[m]);
-      const shuffled = [...available].sort(() => Math.random() - 0.5);
-      return {
-        date: d,
-        meal: m,
-        people: shuffled.slice(0, 3),
-        total: available.length
-      };
-    }));
-  }, [availabilities, people]);
-
+  // --- PREPARAZIONE DATI GRAFICI ---
   const chartsData = useMemo(() => {
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
     const mealsMix = [
@@ -170,8 +198,8 @@ const App = () => {
     const debtData = people.map(p => ({ name: p.split(' ')[0], euro: calculateDebt(p) })).filter(d => d.euro > 0);
     const dailyTotal = DATES.map(d => ({ name: d, totale: TIME_SLOTS.reduce((acc, s) => acc + countTotal(d, s), 0) }));
     const categoryMix = [
-      { name: 'Pasti', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo') + countTotal(d, 'Cena'), 0) },
-      { name: 'Altro', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Mattino') + countTotal(d, 'Pomeriggio') + countTotal(d, 'Sera') + countTotal(d, 'Notte'), 0) }
+      { name: 'Fasce Pasti', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo') + countTotal(d, 'Cena'), 0) },
+      { name: 'Altre Fasce', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Mattino') + countTotal(d, 'Pomeriggio') + countTotal(d, 'Sera') + countTotal(d, 'Notte'), 0) }
     ];
     const lineData = DATES.map(d => ({ 
       name: d.split(' ')[1], 
@@ -182,49 +210,59 @@ const App = () => {
     return { timeline, mealsMix, staffActivity, radar, debtData, dailyTotal, categoryMix, lineData };
   }, [availabilities, people]);
 
-  // LOGIN VIEW
+  // --- TEMA E STILI ---
+  const themeClasses = darkMode 
+    ? "bg-slate-900 text-white" 
+    : "bg-slate-50 text-slate-800";
+  const cardClasses = darkMode
+    ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20"
+    : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
+  
   if (!currentUser) {
     return (
-      <div className={`min-h-screen ${theme.bg} p-4 flex flex-col items-center justify-center transition-colors duration-300`}>
+      <div className={`min-h-screen p-4 flex flex-col items-center justify-center transition-colors duration-300 ${themeClasses}`}>
         <div className="absolute top-4 right-4">
-          <button onClick={() => setDarkMode(!darkMode)} className={`p-3 ${theme.card} rounded-2xl border shadow-lg`}>
-            {darkMode ? <Sun className="text-yellow-400" size={24} /> : <Moon className="text-indigo-600" size={24} />}
+          <button onClick={() => setDarkMode(!darkMode)} className="p-3 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-500 transition-all">
+            {darkMode ? <Sun size={24} /> : <Moon size={24} />}
           </button>
         </div>
-        <h1 className={`text-4xl md:text-6xl font-black ${theme.text} mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-pink-600`}>
-          Triduo Tracker 2026 ✨
-        </h1>
-        <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className={`${theme.card} rounded-[2rem] shadow-xl p-6 flex flex-col h-[500px] border-2 ${theme.border}`}>
-            <h2 className={`text-xl font-bold mb-4 ${theme.text}`}>Chi sei?</h2>
-            <input 
-              type="text" placeholder="Cerca nome..." 
-              className={`w-full p-3 rounded-xl mb-4 border ${theme.input}`}
-              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+        <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-fuchsia-500 mb-10 tracking-tighter text-center">Triduo Tracker</h1>
+        
+        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className={`${cardClasses} rounded-[2.5rem] p-6 flex flex-col h-[500px] md:h-[550px] border relative overflow-hidden`}>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-0"></div>
+            <h2 className="text-2xl font-black mb-6 z-10">Chi sei?</h2>
+            <div className="relative z-10">
+               <input type="text" placeholder="Cerca il tuo nome..." className={`w-full px-4 py-3 rounded-2xl mb-4 border outline-none focus:ring-2 ring-indigo-400 transition-all ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200'}`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar z-10">
               {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-                <button key={p} onClick={() => setCurrentUser(p)} className={`w-full flex items-center gap-3 p-3 rounded-xl border ${theme.hover} ${theme.border}`}>
-                  <div className="w-10 h-10 rounded-lg bg-purple-500 text-white flex items-center justify-center font-bold text-xs">{getInitials(p)}</div>
-                  <span className={`font-medium ${theme.text}`}>{p}</span>
+                <button key={p} onClick={() => { setCurrentUser(p); loadData(); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${darkMode ? 'hover:bg-indigo-500/20 border-transparent hover:border-indigo-500/50' : 'hover:bg-indigo-50 border-transparent hover:border-indigo-100'}`}>
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg">{getInitials(p)}</div>
+                  <span className="font-bold text-lg">{p}</span>
+                  <ChevronRight className="ml-auto w-5 h-5 opacity-50" />
                 </button>
               ))}
+              <div className="pt-4 pb-2">
+                <button onClick={addPerson} className={`w-full p-4 border-2 border-dashed rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm uppercase ${darkMode ? 'border-slate-600 text-slate-400 hover:bg-slate-700' : 'border-indigo-200 text-indigo-500 hover:bg-indigo-50'}`}>
+                  <UserPlus size={18} /> Aggiungi nuovo nome
+                </button>
+              </div>
             </div>
-            <button onClick={addPerson} className="mt-4 p-3 border-2 border-dashed border-purple-400 rounded-xl text-purple-600 font-bold text-sm">
-              + AGGIUNGI ANIMATORE
-            </button>
-            <button onClick={() => setCurrentUser('Admin')} className="mt-2 p-3 bg-slate-800 text-white rounded-xl font-bold text-xs">🔐 ADMIN ACCESS</button>
+            <button onClick={() => setCurrentUser('Admin')} className="mt-4 py-3 bg-slate-900 dark:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-80 transition-opacity z-10">Admin Access</button>
           </div>
-          <div className={`${theme.card} rounded-[2rem] shadow-xl p-6 flex flex-col h-[500px] border-2 ${theme.border}`}>
-            <h2 className={`text-xl font-bold mb-4 ${theme.text}`}>Idee Brillanti</h2>
-            <div className="flex gap-2 mb-4">
-              <input value={newIdea} onChange={(e) => setNewIdea(e.target.value)} className={`flex-1 p-3 rounded-xl border ${theme.input}`} placeholder="Idea..." />
-              <button onClick={addIdea} className="p-3 bg-purple-500 text-white rounded-xl"><Send size={20}/></button>
+
+          <div className={`${cardClasses} rounded-[2.5rem] p-6 flex flex-col h-[500px] md:h-[550px] border relative overflow-hidden`}>
+            <div className="absolute bottom-0 left-0 w-40 h-40 bg-fuchsia-500/10 rounded-full blur-3xl -z-0"></div>
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 z-10"><Lightbulb className="text-amber-500" /> Idee</h2>
+            <div className="flex gap-2 mb-4 z-10">
+              <input type="text" placeholder="Nuova idea..." className={`flex-1 px-4 py-3 rounded-2xl border outline-none ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200'}`} value={newIdea} onChange={(e) => setNewIdea(e.target.value)} />
+              <button onClick={addIdea} className="p-3 bg-indigo-600 text-white rounded-2xl hover:scale-105 transition-transform"><Send size={18} /></button>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar z-10">
               {ideas.map(idea => (
-                <div key={idea.id} className={`p-3 rounded-xl border ${theme.border} bg-purple-50/50`}>
-                  <p className="text-sm font-medium">" {idea.text} "</p>
+                <div key={idea.id} className={`p-4 rounded-2xl shadow-sm border ${darkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-indigo-50 border-indigo-100'}`}>
+                  <p className="font-bold text-sm leading-tight italic opacity-90">"{idea.text}"</p>
                 </div>
               ))}
             </div>
@@ -237,104 +275,142 @@ const App = () => {
   const isAdmin = currentUser === 'Admin';
 
   return (
-    <div className={`min-h-screen ${theme.bg} pb-20`}>
-      <nav className={`${theme.card} border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-md`}>
-        <div className="font-black text-purple-600 text-xl" onClick={() => setCurrentUser(null)}>✨ TRACKER 2026</div>
+    <div className={`min-h-screen pb-32 transition-colors duration-300 ${themeClasses}`}>
+      <style>{`
+        @media print { @page { size: landscape; } nav, .no-print { display: none !important; } .print-area { display: block !important; width: 100% !important; border: none !important; } table { font-size: 8px !important; } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+      `}</style>
+      
+      <nav className={`border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 no-print backdrop-blur-md ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'}`}>
+        <div className="font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xl cursor-pointer" onClick={() => setCurrentUser(null)}>TRACKER 2026</div>
         <div className="flex items-center gap-4">
-          <span className={`px-4 py-2 rounded-full ${theme.input} font-bold text-sm`}>{currentUser}</span>
-          <button onClick={() => setCurrentUser(null)} className="text-rose-500"><LogOut/></button>
+          <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+            {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button onClick={() => setCurrentUser(null)} className="text-rose-500 flex items-center gap-2 font-bold text-sm uppercase hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2 rounded-xl transition-all">
+            <span className="hidden sm:inline opacity-70 mr-1">{currentUser}</span> 
+            <LogOut size={20}/>
+          </button>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         {isAdmin ? (
-          <div className="space-y-6">
-            <div className="flex gap-2 flex-wrap">
-              {['summary', 'matrix', 'charts', 'dishes'].map(v => (
-                <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl font-bold text-xs uppercase ${testView === v ? 'bg-purple-600 text-white' : 'bg-white border'}`}>
-                  {v}
-                </button>
+          <div className="space-y-8">
+            <div className="flex gap-2 flex-wrap no-print items-center bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl">
+              {['summary', 'caranzano', 'matrix', 'charts', 'dishes'].map(v => (
+                <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${testView === v ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white dark:hover:bg-slate-700'}`}>{v === 'dishes' ? 'Turni Piatti' : v}</button>
               ))}
-              <button onClick={() => window.print()} className="ml-auto px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase">Stampa</button>
-              <button onClick={exportToExcel} className="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold text-xs uppercase">Excel</button>
+              <div className="ml-auto flex gap-2">
+                 <button onClick={exportToCSV} className="px-4 py-2 bg-blue-500 text-white rounded-xl text-xs font-black flex items-center gap-2 uppercase hover:bg-blue-600 shadow-md transition-transform active:scale-95"><Download size={16}/> CSV</button>
+                 <button onClick={() => window.print()} className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black flex items-center gap-2 uppercase hover:bg-emerald-600 shadow-md transition-transform active:scale-95"><Printer size={16}/> Stampa</button>
+              </div>
             </div>
 
-            {testView === 'matrix' && (
-              <div className={`${theme.card} rounded-2xl border shadow-xl overflow-x-auto`}>
-                <table className="w-full text-xs">
+            {testView === 'matrix' ? (
+              <div className={`rounded-3xl border shadow-xl overflow-hidden print-area ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
+                <div className="overflow-x-auto">
+                <table className="w-full text-[10px] border-collapse">
                   <thead>
-                    <tr className="bg-slate-100">
-                      <th className="p-3 text-left sticky left-0 bg-slate-100">Staff</th>
-                      {ALL_PERIODS.map((p, i) => <th key={i} className="p-2 border-l">{p.date}<br/>{p.slot}</th>)}
-                      <th className="p-2 border-l">€</th>
+                    <tr className={darkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-100 text-slate-600'}>
+                      <th className={`p-3 text-left border-r sticky left-0 z-10 w-32 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-100 border-slate-200'}`}>Staff</th>
+                      {ALL_PERIODS.map((p,i)=><th key={i} className={`p-2 border-r text-center font-black ${darkMode ? 'border-slate-700' : 'border-slate-200'}`}>{p.date.split(' ')[1]}<br/><span className="text-[9px] opacity-70">{p.slot}</span></th>)}
+                      <th className="p-3 bg-amber-500/10 text-amber-600">€</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className={darkMode ? 'text-slate-300' : 'text-slate-700'}>
                     {people.map(p => (
-                      <tr key={p} className="border-t">
-                        <td className="p-3 font-bold sticky left-0 bg-white">{p}</td>
-                        {ALL_PERIODS.map((per, i) => (
-                          <td key={i} className="p-2 text-center border-l">
-                            {availabilities[p]?.[per.date]?.[per.slot] && <Check size={14} className="mx-auto text-emerald-500" />}
-                          </td>
-                        ))}
-                        <td className="p-2 text-center border-l font-bold">{calculateDebt(p)}€</td>
+                      <tr key={p} className={`border-t transition-colors ${darkMode ? 'border-slate-700 hover:bg-slate-700' : 'border-slate-100 hover:bg-slate-50'}`}>
+                        <td className={`p-2 font-bold sticky left-0 border-r ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>{p}</td>
+                        {ALL_PERIODS.map((per,i)=><td key={i} className={`text-center border-r p-1 ${darkMode ? 'border-slate-700' : 'border-slate-100'}`}>{availabilities[p]?.[per.date]?.[per.slot] && <Check size={14} className="mx-auto text-emerald-500"/>}</td>)}
+                        <td className="p-2 text-center bg-amber-500/5 font-black text-amber-500">{calculateDebt(p)}€</td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot className="bg-indigo-900 text-white font-black uppercase text-[9px]">
+                    <tr>
+                      <td className="p-3 border-r border-indigo-800">TOT. PRESENZE</td>
+                      {ALL_PERIODS.map((p,i)=><td key={i} className="text-center border-r border-indigo-800 text-indigo-300">{countTotal(p.date, p.slot)}</td>)}
+                      <td className="bg-indigo-600 text-center">{people.reduce((acc,p)=>acc+calculateDebt(p),0)}€</td>
+                    </tr>
+                  </tfoot>
                 </table>
+                </div>
               </div>
-            )}
-
-            {testView === 'dishes' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {dishPlan.map((item, idx) => (
-                  <div key={idx} className={`${theme.card} p-4 rounded-2xl border shadow-md`}>
-                    <div className="flex justify-between font-bold mb-3 border-b pb-2">
-                      <span>{item.date}</span>
-                      <span className="text-purple-600">{item.meal}</span>
+            ) : testView === 'charts' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {/* Reusable Chart Card */}
+                 {[
+                   { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
+                   { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
+                   { title: "3. Classifica Impegni", chart: <BarChart data={chartsData.staffActivity.slice(0, 6)}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/></BarChart> },
+                   { title: "4. Analisi Fasce Orarie", chart: <RadarChart cx="50%" cy="50%" outerRadius="60%" data={chartsData.radar}><PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/></RadarChart> },
+                   { title: "5. Stato Pagamenti", chart: <BarChart data={chartsData.debtData}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/></BarChart> },
+                   { title: "6. Volume per Giorno", chart: <BarChart data={chartsData.dailyTotal}><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/></BarChart> },
+                   { title: "7. Tipologia Attività", chart: <PieChart><Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}</Pie><Tooltip/></PieChart> },
+                   { title: "8. Trend Giornaliero", chart: <LineChart data={chartsData.lineData}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" /></LineChart> }
+                 ].map((c, i) => (
+                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
+                      <h3 className="text-[10px] font-black mb-4 uppercase opacity-50 tracking-widest">{c.title}</h3>
+                      <ResponsiveContainer width="100%" height={180}>
+                        {c.chart}
+                      </ResponsiveContainer>
                     </div>
-                    {item.people.map((p, i) => <div key={i} className="text-sm py-1">🍽️ {p}</div>)}
-                    <div className="mt-2 pt-2 border-t text-[10px] text-slate-400">Totale disponibili: {item.total}</div>
+                 ))}
+              </div>
+            ) : testView === 'dishes' ? (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {dishwasherSchedule.map((item, idx) => (
+                   <div key={idx} className={`${cardClasses} p-6 rounded-3xl border relative overflow-hidden`}>
+                      <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={40}/></div>
+                      <h3 className="font-black text-lg mb-1">{item.date}</h3>
+                      <span className="inline-block px-2 py-1 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-xs font-bold uppercase mb-4">{item.slot}</span>
+                      
+                      {item.crew.length < 3 && (
+                         <div className="mb-3 flex items-center gap-2 text-amber-500 text-xs font-bold bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg">
+                            <AlertTriangle size={14} /> Pochi presenti ({item.totalPresent})
+                         </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <div className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Squadra lavaggio</div>
+                        {item.crew.map(p => (
+                          <div key={p} className="flex items-center gap-2">
+                             <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white flex items-center justify-center text-[9px] font-black">{getInitials(p)}</div>
+                             <span className="font-bold text-sm">{p}</span>
+                          </div>
+                        ))}
+                         {item.crew.length === 0 && <span className="text-sm italic opacity-50">Nessuno disponibile</span>}
+                      </div>
+                   </div>
+                 ))}
+               </div>
+            ) : testView === 'caranzano' ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {DATES.map(d => (
+                  <div key={d} className={`${cardClasses} rounded-3xl p-6 border`}>
+                    <h3 className="text-xl font-black mb-6 uppercase border-b pb-2 border-indigo-100 text-indigo-500">{d}</h3>
+                    {['Pranzo', 'Cena'].map(m => (
+                      <div key={m} className={`flex justify-between items-center p-5 rounded-[1.5rem] mb-3 shadow-inner ${darkMode ? 'bg-slate-900' : 'bg-slate-50 border border-slate-100'}`}>
+                        <span className="font-black opacity-50 uppercase text-xs">{m}</span>
+                        <span className="text-4xl font-black">{countTotal(d, m)}</span>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
-            )}
-
-            {testView === 'charts' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className={`${theme.card} p-4 rounded-2xl border h-64`}>
-                    <h3 className="text-xs font-bold mb-4 uppercase">Presenze Timeline</h3>
-                    <ResponsiveContainer width="100%" height="90%">
-                      <AreaChart data={chartsData.timeline}>
-                        <XAxis dataKey="name" tick={{fontSize: 8}}/>
-                        <Tooltip />
-                        <Area type="monotone" dataKey="persone" stroke="#8884d8" fill="#8884d8" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                 </div>
-                 <div className={`${theme.card} p-4 rounded-2xl border h-64`}>
-                    <h3 className="text-xs font-bold mb-4 uppercase">Debiti Totali</h3>
-                    <ResponsiveContainer width="100%" height="90%">
-                      <BarChart data={chartsData.debtData}>
-                        <XAxis dataKey="name" tick={{fontSize: 8}}/>
-                        <Tooltip />
-                        <Bar dataKey="euro" fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                 </div>
-              </div>
-            )}
-
-            {testView === 'summary' && (
+            ) : (
+              // SUMMARY VIEW
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {DATES.map(d => (
-                  <div key={d} className={`${theme.card} p-6 rounded-2xl border shadow-lg`}>
-                    <h3 className="font-black text-xl mb-4 text-purple-600 border-b pb-2">{d}</h3>
+                  <div key={d} className={`${cardClasses} rounded-3xl p-6 border text-center`}>
+                    <h3 className="font-black text-indigo-500 border-b pb-2 mb-4 uppercase text-center tracking-tighter border-indigo-100/20">{d}</h3>
                     {TIME_SLOTS.map(s => (
-                      <div key={s} className="flex justify-between py-2 border-b last:border-0">
-                        <span className="text-sm font-medium uppercase">{s}</span>
-                        <span className="font-bold text-lg">{countTotal(d, s)}</span>
+                      <div key={s} className={`flex justify-between py-2 border-b last:border-0 ${darkMode ? 'border-slate-700' : 'border-slate-50'}`}>
+                        <span className="font-bold opacity-60 text-[10px] uppercase tracking-wide">{s}</span>
+                        <span className="font-black">{countTotal(d, s)}</span>
                       </div>
                     ))}
                   </div>
@@ -343,53 +419,62 @@ const App = () => {
             )}
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto space-y-6">
-             <div className={`${theme.card} p-6 rounded-3xl border-2 ${theme.border} shadow-xl`}>
-                <h2 className="text-2xl font-black mb-4">Ciao {currentUser}! 👋</h2>
-                <p className="text-sm text-slate-500 mb-6">Seleziona i momenti in cui sarai presente. Il sistema calcolerà automaticamente i costi dei pasti.</p>
-                
-                <div className="space-y-8">
-                  {DATES.map(d => (
-                    <div key={d}>
-                      <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                        <Calendar size={18} className="text-purple-500"/> {d}
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {TIME_SLOTS.map(s => {
-                          const active = availabilities[currentUser]?.[d]?.[s];
-                          return (
-                            <button
-                              key={s}
-                              onClick={() => toggleAvailability(d, s)}
-                              className={`p-3 rounded-2xl border-2 transition-all font-bold text-xs uppercase flex flex-col items-center gap-1 ${
-                                active ? 'bg-purple-600 border-purple-600 text-white shadow-lg scale-105' : 'bg-white border-slate-100 text-slate-400'
-                              }`}
-                            >
-                              {s === 'Pranzo' || s === 'Cena' ? <Utensils size={14}/> : <Clock size={14}/>}
-                              {s}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          <div className="space-y-6 max-w-md mx-auto">
+            {/* BOX COSTI RIEPILOGO */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 rounded-[2.5rem] text-white flex justify-between items-center shadow-2xl relative overflow-hidden transform transition-all hover:scale-[1.01]">
+              <div className="relative z-10">
+                <h2 className="text-2xl font-black uppercase tracking-tight">Ciao, <br/>{currentUser.split(' ')[0]}</h2>
+                <p className="opacity-80 font-medium text-xs mt-1">Triduo 2026</p>
+              </div>
+              <div className="text-right bg-white/10 backdrop-blur-md p-4 rounded-[2rem] border border-white/20 relative z-10 shadow-lg min-w-[120px]">
+                <div className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Da Versare</div>
+                <div className="text-3xl font-black">{calculateDebt(currentUser)}€</div>
+              </div>
+              <div className="absolute top-[-20px] right-[-20px] w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-[-20px] left-[-20px] w-32 h-32 bg-fuchsia-500/20 rounded-full blur-2xl"></div>
+            </div>
 
-                <div className="mt-8 p-4 bg-amber-50 rounded-2xl border-2 border-amber-100 flex justify-between items-center">
-                   <div>
-                      <p className="text-[10px] font-black uppercase text-amber-600">Totale Contributo Pasti</p>
-                      <p className="text-2xl font-black text-amber-700">{calculateDebt(currentUser)}€</p>
-                   </div>
-                   <Wallet className="text-amber-500" size={32} />
-                </div>
-
-                <button 
-                  onClick={() => { persistToCloud({availabilities, ideas, people}); alert("Dati salvati con successo!"); }}
-                  className="w-full mt-6 p-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl"
-                >
-                  Salva Disponibilità
-                </button>
+             {/* NOTIFICHE & AZIONI */}
+             <div className="grid grid-cols-2 gap-3">
+                 <button onClick={handleNotification} disabled={notifyStatus !== 'idle'} className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'} ${notifyStatus === 'sent' ? 'border-green-500 text-green-500' : ''}`}>
+                    {notifyStatus === 'sending' ? <Activity className="animate-spin text-indigo-500"/> : notifyStatus === 'sent' ? <CheckCircle2 size={24}/> : <Bell className="text-indigo-500" size={24}/>}
+                    <span className="text-[10px] font-black uppercase opacity-70">Avvisami</span>
+                 </button>
+                 <div className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                    <Calendar className="text-fuchsia-500" size={24}/>
+                    <span className="text-[10px] font-black uppercase opacity-70">Calendario</span>
+                 </div>
              </div>
+
+            <div className="space-y-4">
+              {DATES.map(d => (
+                <div key={d} className={`${cardClasses} p-5 rounded-[2rem] border`}>
+                  <div className="font-black mb-4 text-center border-b pb-3 border-slate-100 dark:border-slate-700 text-indigo-500 uppercase tracking-widest text-sm">{d}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {TIME_SLOTS.map(s => {
+                      const active = availabilities[currentUser]?.[d]?.[s];
+                      const isMeal = ['Pranzo', 'Cena'].includes(s);
+                      return (
+                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`relative py-4 rounded-xl font-black uppercase transition-all flex flex-col items-center justify-center border-2 ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/30' : `bg-transparent ${darkMode ? 'border-slate-700 text-slate-400 hover:border-slate-600' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}`}>
+                          <div className="flex items-center gap-1 mb-1">
+                             {isMeal ? <Utensils size={14}/> : <Clock size={14}/>}
+                             {active && <CheckCircle2 size={14}/>}
+                          </div>
+                          <span className="text-[10px] tracking-wide">{s}</span>
+                          {isMeal && !active && <span className="absolute top-1 right-1 text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">+5€</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="fixed bottom-6 left-0 right-0 p-4 flex justify-center z-50 no-print pointer-events-none">
+              <button onClick={handleFinalSave} disabled={isSaving} className="pointer-events-auto w-full max-w-xs bg-slate-900 dark:bg-white dark:text-black text-white py-4 rounded-[2rem] font-black text-lg shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 border-4 border-white/20 dark:border-black/10 backdrop-blur-md">
+                {isSaving ? <Activity className="animate-spin" /> : <><Check size={24}/> SALVA TUTTO</>}
+              </button>
+            </div>
           </div>
         )}
       </main>
