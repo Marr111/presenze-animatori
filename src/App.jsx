@@ -10,6 +10,7 @@ import {
   PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, Legend, ResponsiveContainer
 } from 'recharts';
 
+// --- CONFIGURAZIONE DATI ---
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
@@ -53,27 +54,35 @@ const App = () => {
   // Stato per il caricamento sequenziale dei grafici
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
-  // --- SINCRONIZZAZIONE ---
+  // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
     try {
+      // Nota: In locale senza backend questo fallirà silenziosamente, ed è normale.
+      // Usa i dati iniziali se la fetch fallisce.
       const response = await fetch('/api/get-data');
-      const result = await response.json();
-      if (result) {
-        setAvailabilities(result.availabilities || {});
-        setIdeas(result.ideas || []);
-        if (result.people && result.people.length > 0) setPeople(result.people);
+      if (response.ok) {
+        const result = await response.json();
+        if (result) {
+          setAvailabilities(result.availabilities || {});
+          setIdeas(result.ideas || []);
+          if (result.people && result.people.length > 0) setPeople(result.people);
+        }
       }
-    } catch (e) { console.error("Errore sync", e); }
+    } catch (e) { 
+      // console.log("Modalità offline o errore sync"); 
+    }
   };
 
   useEffect(() => {
     loadData();
+    // Polling ogni 10 secondi
     const interval = setInterval(() => {
       if (!currentUser) loadData();
     }, 10000);
     return () => clearInterval(interval);
   }, [currentUser]);
 
+  // Gestione Dark Mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -82,7 +91,7 @@ const App = () => {
     }
   }, [darkMode]);
 
-  // Caricamento grafici sequenziale rallentato leggermente per sicurezza
+  // Gestione Caricamento Grafici (Waterfall)
   useEffect(() => {
     if (testView === 'charts') {
       setVisibleChartsCount(0);
@@ -92,11 +101,12 @@ const App = () => {
           clearInterval(interval);
           return prev;
         });
-      }, 300);
+      }, 300); // 300ms delay tra un grafico e l'altro
       return () => clearInterval(interval);
     }
   }, [testView]);
 
+  // --- AZIONI ---
   const persistToCloud = async (updatedData) => {
     setIsSaving(true);
     try {
@@ -147,6 +157,7 @@ const App = () => {
     });
   };
 
+  // --- EXPORT & CALENDAR ---
   const downloadICS = () => {
     let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TriduoTracker//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n`;
     const userSlots = availabilities[currentUser] || {};
@@ -200,6 +211,7 @@ const App = () => {
     document.body.removeChild(link);
   };
 
+  // --- CALCOLI E UTILITY ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -231,6 +243,7 @@ const App = () => {
     return schedule;
   }, [people, availabilities]);
 
+  // --- PREPARAZIONE DATI GRAFICI (Memoizzati) ---
   const chartsData = useMemo(() => {
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
     const mealsMix = [
@@ -261,6 +274,7 @@ const App = () => {
   const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
   const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
+  // Definizioni Grafici
   const chartDefinitions = [
     { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
     { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
@@ -398,8 +412,9 @@ const App = () => {
                  {chartDefinitions.map((c, i) => (
                     <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
                       <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
-                      {/* QUI È LA FIX: Assegniamo un'altezza esplicita al wrapper */}
-                      <div style={{ width: '100%', height: '200px', minWidth: 0 }}>
+                      
+                      {/* --- FIX GRAFICI: ALTEZZA FISSA 250px --- */}
+                      <div style={{ width: '100%', height: '250px' }}>
                         {i <= visibleChartsCount ? (
                            <ResponsiveContainer width="100%" height="100%">
                              {c.chart}
@@ -410,6 +425,7 @@ const App = () => {
                            </div>
                         )}
                       </div>
+                      
                     </div>
                  ))}
               </div>
