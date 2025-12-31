@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
-  PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles
+  PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
@@ -14,6 +14,23 @@ const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
+
+// Mappa per convertire le stringhe in date reali per il Calendario (Anno 2026)
+const DATE_MAP = {
+  'Gio 2 Apr': '20260402',
+  'Ven 3 Apr': '20260403',
+  'Sab 4 Apr': '20260404'
+};
+
+// Orari indicativi per i turni (Formato HHMMSS)
+const TIME_MAP = {
+  'Mattino':    { start: '090000', end: '120000' },
+  'Pranzo':     { start: '120000', end: '143000' },
+  'Pomeriggio': { start: '143000', end: '190000' },
+  'Cena':       { start: '190000', end: '213000' },
+  'Sera':       { start: '213000', end: '235900' },
+  'Notte':      { start: '000000', end: '080000' } // Nota: La notte tecnicamente scavalca il giorno, per semplicità qui la segniamo start->end
+};
 
 const INITIAL_PEOPLE = [
   'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
@@ -71,14 +88,14 @@ const App = () => {
   // Gestione caricamento grafici sequenziale
   useEffect(() => {
     if (testView === 'charts') {
-      setVisibleChartsCount(0); // Reset
+      setVisibleChartsCount(0);
       const interval = setInterval(() => {
         setVisibleChartsCount(prev => {
-          if (prev < 8) return prev + 1; // Ci sono 8 grafici totali
+          if (prev < 8) return prev + 1;
           clearInterval(interval);
           return prev;
         });
-      }, 500); // Carica un grafico ogni mezzo secondo
+      }, 500);
       return () => clearInterval(interval);
     }
   }, [testView]);
@@ -119,45 +136,92 @@ const App = () => {
     await persistToCloud({ availabilities, ideas: newIdeas, people });
   };
 
-  // --- CORREZIONE BUG SELEZIONE MULTIPLA ---
   const toggleAvailability = (date, slot) => {
     setAvailabilities(prev => {
       const userAvail = prev[currentUser] || {};
       const dayAvail = userAvail[date] || {};
-      
       return {
         ...prev,
         [currentUser]: { 
           ...userAvail, 
-          [date]: { 
-            ...dayAvail, // Mantiene le altre selezioni di quel giorno!
-            [slot]: !dayAvail[slot] 
-          } 
+          [date]: { ...dayAvail, [slot]: !dayAvail[slot] } 
         }
       };
     });
   };
 
-  const handleNotification = () => {
-    setNotifyStatus("sending");
-    setTimeout(() => {
-      setNotifyStatus("sent");
-      alert("✅ Notifiche attivate! Riceverai promemoria via Email e Calendar.");
-      setTimeout(() => setNotifyStatus("idle"), 3000);
-    }, 1500);
+  // --- GENERAZIONE FILE ICS (CALENDARIO) ---
+  const downloadICS = () => {
+    let icsContent = 
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//TriduoTracker//IT
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+`;
+
+    const userSlots = availabilities[currentUser] || {};
+    let eventCount = 0;
+
+    Object.keys(userSlots).forEach(dateLabel => {
+      const slots = userSlots[dateLabel];
+      if (!slots) return;
+      
+      Object.keys(slots).forEach(slotName => {
+        if (slots[slotName]) { // Se l'utente è presente
+          const dateStr = DATE_MAP[dateLabel];
+          const timeData = TIME_MAP[slotName];
+          
+          if (dateStr && timeData) {
+            eventCount++;
+            // Gestione "Notte" che finisce il giorno dopo
+            let endDateStr = dateStr;
+            if (slotName === 'Notte') {
+                // Semplificazione: per il file ics base manteniamo la stessa data start/end per compatibilità
+                // oppure bisognerebbe calcolare il giorno successivo.
+                // Per semplicità qui assumiamo che l'evento notte inizi a mezzanotte del giorno indicato.
+            }
+
+            icsContent += 
+`BEGIN:VEVENT
+SUMMARY:Triduo 2026 - Turno ${slotName}
+DTSTART:${dateStr}T${timeData.start}
+DTEND:${endDateStr}T${timeData.end}
+DESCRIPTION:Turno confermato per ${currentUser}. Ricordati di controllare i piatti!
+LOCATION:Casa Alpina
+STATUS:CONFIRMED
+END:VEVENT
+`;
+          }
+        }
+      });
+    });
+
+    icsContent += `END:VCALENDAR`;
+
+    if (eventCount === 0) {
+      alert("Nessun turno selezionato da esportare!");
+      return;
+    }
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `Triduo_${currentUser.replace(/\s+/g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const exportToCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "Nome," + ALL_PERIODS.map(p => `${p.date} ${p.slot}`).join(",") + ",Totale Debito\n";
-    
     people.forEach(p => {
       let row = `${p},`;
       row += ALL_PERIODS.map(per => availabilities[p]?.[per.date]?.[per.slot] ? "X" : "").join(",");
       row += `,${calculateDebt(p)}€`;
       csvContent += row + "\n";
     });
-
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -184,7 +248,6 @@ const App = () => {
     const schedule = [];
     const washCounts = {};
     people.forEach(p => washCounts[p] = 0);
-
     DATES.forEach(date => {
       ['Pranzo', 'Cena'].forEach(slot => {
         const presentPeople = people.filter(p => availabilities[p]?.[date]?.[slot]);
@@ -232,7 +295,7 @@ const App = () => {
   const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
   const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
-  // Lista definizioni grafici per il render sequenziale
+  // Lista definizioni grafici per il render sequenziale. IMPORTANTE: Usiamo width/height espliciti nel contenitore e 100% nel ResponsiveContainer.
   const chartDefinitions = [
     { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
     { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
@@ -368,17 +431,19 @@ const App = () => {
             ) : testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                  {chartDefinitions.map((c, i) => (
-                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center min-h-[220px]`}>
-                      <h3 className="text-[10px] font-black mb-4 uppercase opacity-50 tracking-widest">{c.title}</h3>
-                      <ResponsiveContainer width="100%" height={180}>
+                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`} style={{ height: 250 }}>
+                      <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
+                      <div className="w-full h-full pb-6">
                         {i <= visibleChartsCount ? (
-                           c.chart
+                           <ResponsiveContainer width="100%" height="100%">
+                             {c.chart}
+                           </ResponsiveContainer>
                         ) : (
                            <div className="w-full h-full flex items-center justify-center animate-pulse">
                               <span className="text-xs font-bold opacity-30">Caricamento grafico...</span>
                            </div>
                         )}
-                      </ResponsiveContainer>
+                      </div>
                     </div>
                  ))}
               </div>
@@ -456,16 +521,15 @@ const App = () => {
               <div className="absolute bottom-[-20px] left-[-20px] w-32 h-32 bg-fuchsia-500/20 rounded-full blur-2xl"></div>
             </div>
 
-             {/* NOTIFICHE & AZIONI */}
-             <div className="grid grid-cols-2 gap-3">
-                 <button onClick={handleNotification} disabled={notifyStatus !== 'idle'} className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'} ${notifyStatus === 'sent' ? 'border-green-500 text-green-500' : ''}`}>
-                    {notifyStatus === 'sending' ? <Activity className="animate-spin text-indigo-500"/> : notifyStatus === 'sent' ? <CheckCircle2 size={24}/> : <Bell className="text-indigo-500" size={24}/>}
-                    <span className="text-[10px] font-black uppercase opacity-70">Avvisami</span>
+             {/* NOTIFICHE & CALENDARIO UNIFICATI */}
+             <div className="grid grid-cols-1 gap-3">
+                 <button onClick={downloadICS} className={`p-4 rounded-2xl border flex items-center justify-center gap-4 transition-all ${darkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : 'bg-white border-slate-100 hover:bg-slate-50'} shadow-sm`}>
+                    <CalendarDays className="text-fuchsia-500" size={28}/>
+                    <div className="text-left">
+                       <div className="font-black uppercase text-sm">Aggiungi al Calendario</div>
+                       <div className="text-[10px] opacity-60">Scarica i tuoi turni e importali (Google/Apple)</div>
+                    </div>
                  </button>
-                 <div className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                    <Calendar className="text-fuchsia-500" size={24}/>
-                    <span className="text-[10px] font-black uppercase opacity-70">Calendario</span>
-                 </div>
              </div>
 
             <div className="space-y-4">
