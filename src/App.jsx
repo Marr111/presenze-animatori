@@ -15,21 +15,19 @@ const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
 
-// Mappa per convertire le stringhe in date reali per il Calendario (Anno 2026)
 const DATE_MAP = {
   'Gio 2 Apr': '20260402',
   'Ven 3 Apr': '20260403',
   'Sab 4 Apr': '20260404'
 };
 
-// Orari indicativi per i turni (Formato HHMMSS)
 const TIME_MAP = {
   'Mattino':    { start: '090000', end: '120000' },
   'Pranzo':     { start: '120000', end: '143000' },
   'Pomeriggio': { start: '143000', end: '190000' },
   'Cena':       { start: '190000', end: '213000' },
   'Sera':       { start: '213000', end: '235900' },
-  'Notte':      { start: '000000', end: '080000' } // Nota: La notte tecnicamente scavalca il giorno, per semplicità qui la segniamo start->end
+  'Notte':      { start: '000000', end: '080000' }
 };
 
 const INITIAL_PEOPLE = [
@@ -76,7 +74,6 @@ const App = () => {
     return () => clearInterval(interval);
   }, [currentUser]);
 
-  // Gestione classe dark mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -85,7 +82,7 @@ const App = () => {
     }
   }, [darkMode]);
 
-  // Gestione caricamento grafici sequenziale
+  // Caricamento grafici sequenziale rallentato leggermente per sicurezza
   useEffect(() => {
     if (testView === 'charts') {
       setVisibleChartsCount(0);
@@ -95,7 +92,7 @@ const App = () => {
           clearInterval(interval);
           return prev;
         });
-      }, 500);
+      }, 300);
       return () => clearInterval(interval);
     }
   }, [testView]);
@@ -150,53 +147,25 @@ const App = () => {
     });
   };
 
-  // --- GENERAZIONE FILE ICS (CALENDARIO) ---
   const downloadICS = () => {
-    let icsContent = 
-`BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//TriduoTracker//IT
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-`;
-
+    let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TriduoTracker//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n`;
     const userSlots = availabilities[currentUser] || {};
     let eventCount = 0;
 
     Object.keys(userSlots).forEach(dateLabel => {
       const slots = userSlots[dateLabel];
       if (!slots) return;
-      
       Object.keys(slots).forEach(slotName => {
-        if (slots[slotName]) { // Se l'utente è presente
+        if (slots[slotName]) {
           const dateStr = DATE_MAP[dateLabel];
           const timeData = TIME_MAP[slotName];
-          
           if (dateStr && timeData) {
             eventCount++;
-            // Gestione "Notte" che finisce il giorno dopo
-            let endDateStr = dateStr;
-            if (slotName === 'Notte') {
-                // Semplificazione: per il file ics base manteniamo la stessa data start/end per compatibilità
-                // oppure bisognerebbe calcolare il giorno successivo.
-                // Per semplicità qui assumiamo che l'evento notte inizi a mezzanotte del giorno indicato.
-            }
-
-            icsContent += 
-`BEGIN:VEVENT
-SUMMARY:Triduo 2026 - Turno ${slotName}
-DTSTART:${dateStr}T${timeData.start}
-DTEND:${endDateStr}T${timeData.end}
-DESCRIPTION:Turno confermato per ${currentUser}. Ricordati di controllare i piatti!
-LOCATION:Casa Alpina
-STATUS:CONFIRMED
-END:VEVENT
-`;
+            icsContent += `BEGIN:VEVENT\nSUMMARY:Triduo 2026 - Turno ${slotName}\nDTSTART:${dateStr}T${timeData.start}\nDTEND:${dateStr}T${timeData.end}\nDESCRIPTION:Turno confermato per ${currentUser}.\nLOCATION:Casa Alpina\nSTATUS:CONFIRMED\nEND:VEVENT\n`;
           }
         }
       });
     });
-
     icsContent += `END:VCALENDAR`;
 
     if (eventCount === 0) {
@@ -224,14 +193,13 @@ END:VEVENT
     });
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "triduo_report.csv");
+    link.href = encodedUri;
+    link.download = "triduo_report.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // --- UTILITY ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -243,7 +211,6 @@ END:VEVENT
     return meals * MEAL_PRICE;
   };
 
-  // --- LOGICA LAVAPIATTI (ADMIN) ---
   const dishwasherSchedule = useMemo(() => {
     const schedule = [];
     const washCounts = {};
@@ -264,7 +231,6 @@ END:VEVENT
     return schedule;
   }, [people, availabilities]);
 
-  // --- PREPARAZIONE DATI GRAFICI ---
   const chartsData = useMemo(() => {
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
     const mealsMix = [
@@ -295,7 +261,6 @@ END:VEVENT
   const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
   const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
-  // Lista definizioni grafici per il render sequenziale. IMPORTANTE: Usiamo width/height espliciti nel contenitore e 100% nel ResponsiveContainer.
   const chartDefinitions = [
     { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
     { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
@@ -431,9 +396,10 @@ END:VEVENT
             ) : testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                  {chartDefinitions.map((c, i) => (
-                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`} style={{ height: 250 }}>
+                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
                       <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
-                      <div className="w-full h-full pb-6">
+                      {/* QUI È LA FIX: Assegniamo un'altezza esplicita al wrapper */}
+                      <div style={{ width: '100%', height: '200px', minWidth: 0 }}>
                         {i <= visibleChartsCount ? (
                            <ResponsiveContainer width="100%" height="100%">
                              {c.chart}
