@@ -3,14 +3,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
-  PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays
+  PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays,
+  Trash2, Database, Skull
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
   PolarGrid, PolarAngleAxis, Radar, PieChart, Pie, Cell, LineChart, Line, Legend, ResponsiveContainer
 } from 'recharts';
 
-// --- CONFIGURAZIONE DATI ---
+// --- CONFIGURAZIONE COSTANTI ---
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
 const MEAL_PRICE = 5;
@@ -50,15 +51,11 @@ const App = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [notifyStatus, setNotifyStatus] = useState("idle");
-  
-  // Stato per il caricamento sequenziale dei grafici
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
   // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
     try {
-      // Nota: In locale senza backend questo fallirà silenziosamente, ed è normale.
-      // Usa i dati iniziali se la fetch fallisce.
       const response = await fetch('/api/get-data');
       if (response.ok) {
         const result = await response.json();
@@ -69,20 +66,18 @@ const App = () => {
         }
       }
     } catch (e) { 
-      // console.log("Modalità offline o errore sync"); 
+      // Ignora errori in locale
     }
   };
 
   useEffect(() => {
     loadData();
-    // Polling ogni 10 secondi
     const interval = setInterval(() => {
-      if (!currentUser) loadData();
+      if (!currentUser) loadData(); // Aggiorna solo se non si sta scrivendo
     }, 10000);
     return () => clearInterval(interval);
   }, [currentUser]);
 
-  // Gestione Dark Mode
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -91,7 +86,7 @@ const App = () => {
     }
   }, [darkMode]);
 
-  // Gestione Caricamento Grafici (Waterfall)
+  // Caricamento Grafici Waterfall
   useEffect(() => {
     if (testView === 'charts') {
       setVisibleChartsCount(0);
@@ -101,12 +96,12 @@ const App = () => {
           clearInterval(interval);
           return prev;
         });
-      }, 300); // 300ms delay tra un grafico e l'altro
+      }, 300);
       return () => clearInterval(interval);
     }
   }, [testView]);
 
-  // --- AZIONI ---
+  // --- SALVATAGGIO ---
   const persistToCloud = async (updatedData) => {
     setIsSaving(true);
     try {
@@ -125,6 +120,40 @@ const App = () => {
     setSearchTerm("");
   };
 
+  // --- DEBUG & TEST FUNCTIONS ---
+  const handleResetData = async () => {
+    if (confirm("ATTENZIONE: Stai per cancellare TUTTI i dati (presenze e idee). Sei sicuro?")) {
+      const emptyData = { availabilities: {}, ideas: [], people: INITIAL_PEOPLE };
+      setAvailabilities({});
+      setIdeas([]);
+      setPeople(INITIAL_PEOPLE);
+      await persistToCloud(emptyData);
+      alert("Database resettato!");
+    }
+  };
+
+  const handleGenerateRandomData = async () => {
+    if (confirm("Generare dati casuali per testare i grafici? Sovrascriverà le selezioni attuali.")) {
+      const newAvail = {};
+      people.forEach(person => {
+        newAvail[person] = {};
+        DATES.forEach(d => {
+          newAvail[person][d] = {};
+          TIME_SLOTS.forEach(s => {
+            // 30% di probabilità di essere presente
+            if (Math.random() > 0.7) {
+              newAvail[person][d][s] = true;
+            }
+          });
+        });
+      });
+      setAvailabilities(newAvail);
+      await persistToCloud({ availabilities: newAvail, ideas, people });
+      alert("Dati casuali generati!");
+    }
+  };
+
+  // --- AZIONI UTENTE ---
   const addPerson = async () => {
     const name = prompt("Inserisci Nome e Cognome:");
     if (name && !people.includes(name)) {
@@ -162,7 +191,6 @@ const App = () => {
     let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TriduoTracker//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n`;
     const userSlots = availabilities[currentUser] || {};
     let eventCount = 0;
-
     Object.keys(userSlots).forEach(dateLabel => {
       const slots = userSlots[dateLabel];
       if (!slots) return;
@@ -178,19 +206,13 @@ const App = () => {
       });
     });
     icsContent += `END:VCALENDAR`;
-
-    if (eventCount === 0) {
-      alert("Nessun turno selezionato da esportare!");
-      return;
-    }
-
+    if (eventCount === 0) { alert("Nessun turno selezionato!"); return; }
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = window.URL.createObjectURL(blob);
     link.setAttribute('download', `Triduo_${currentUser.replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    link.click(); document.body.removeChild(link);
   };
 
   const exportToCSV = () => {
@@ -204,14 +226,11 @@ const App = () => {
     });
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.href = encodedUri;
-    link.download = "triduo_report.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    link.href = encodedUri; link.download = "triduo_report.csv";
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
-  // --- CALCOLI E UTILITY ---
+  // --- CALCOLI ---
   const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -243,7 +262,6 @@ const App = () => {
     return schedule;
   }, [people, availabilities]);
 
-  // --- PREPARAZIONE DATI GRAFICI (Memoizzati) ---
   const chartsData = useMemo(() => {
     const timeline = ALL_PERIODS.map(p => ({ name: `${p.date.split(' ')[1]} ${p.slot[0]}.`, persone: countTotal(p.date, p.slot) }));
     const mealsMix = [
@@ -274,7 +292,7 @@ const App = () => {
   const themeClasses = darkMode ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-800";
   const cardClasses = darkMode ? "bg-slate-800 border-slate-700 shadow-xl shadow-black/20" : "bg-white border-slate-200 shadow-xl shadow-slate-200/50";
   
-  // Definizioni Grafici
+  // Lista Grafici (con ResponsiveContainer configurato correttamente)
   const chartDefinitions = [
     { title: "1. Andamento Presenze", chart: <AreaChart data={chartsData.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/></AreaChart> },
     { title: "2. Bilancio Pasti", chart: <PieChart><Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>{chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/></PieChart> },
@@ -377,6 +395,27 @@ const App = () => {
               </div>
             </div>
 
+            {/* --- ZONA PERICOLOSA (TEST) --- */}
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 rounded-3xl p-4 flex items-center justify-between flex-wrap gap-4 no-print">
+              <div className="flex items-center gap-3">
+                 <div className="bg-red-100 dark:bg-red-900 p-2 rounded-xl text-red-600 dark:text-red-300">
+                    <Skull size={24} />
+                 </div>
+                 <div>
+                    <h3 className="font-black text-red-600 dark:text-red-300 text-sm uppercase">Zona Pericolo (Debug)</h3>
+                    <p className="text-[10px] text-red-400 font-bold">Usare solo se si sa cosa si sta facendo.</p>
+                 </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleGenerateRandomData} className="px-4 py-2 bg-white dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:bg-red-50 transition-colors">
+                   <Database size={14}/> Genera Dati Random
+                </button>
+                <button onClick={handleResetData} className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-black uppercase flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg shadow-red-500/30">
+                   <Trash2 size={14}/> RESET TOTALE
+                </button>
+              </div>
+            </div>
+
             {testView === 'matrix' ? (
               <div className={`rounded-3xl border shadow-xl overflow-hidden print-area ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white'}`}>
                 <div className="overflow-x-auto">
@@ -412,20 +451,18 @@ const App = () => {
                  {chartDefinitions.map((c, i) => (
                     <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
                       <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
-                      
-                      {/* --- FIX GRAFICI: ALTEZZA FISSA 250px --- */}
-                      <div style={{ width: '100%', height: '250px' }}>
+                      {/* FIX DEFINITIVO GRAFICI: Container rigido h-300px */}
+                      <div className="w-full h-[300px] min-h-[300px]">
                         {i <= visibleChartsCount ? (
                            <ResponsiveContainer width="100%" height="100%">
                              {c.chart}
                            </ResponsiveContainer>
                         ) : (
-                           <div className="w-full h-full flex items-center justify-center animate-pulse">
-                              <span className="text-xs font-bold opacity-30">Caricamento grafico...</span>
+                           <div className="w-full h-full flex items-center justify-center animate-pulse bg-slate-100 dark:bg-slate-700 rounded-2xl">
+                              <span className="text-xs font-bold opacity-30">Caricamento...</span>
                            </div>
                         )}
                       </div>
-                      
                     </div>
                  ))}
               </div>
