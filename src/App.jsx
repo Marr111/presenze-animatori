@@ -479,23 +479,22 @@ const App = () => {
               </div>
             ) : testView === 'charts' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                 {chartDefinitions.map((c, i) => (
-                    <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center`}>
-                      <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
-                      {/* NUOVO CODICE - CORRETTO */}
-                      <div className="w-full" style={{ height: 300 }}>
-                        {i <= visibleChartsCount ? (
-                           <ResponsiveContainer width="100%" height={300}>
-                             {c.chart}
-                           </ResponsiveContainer>
-                        ) : (
-                           <div className="w-full flex items-center justify-center animate-pulse bg-slate-100 dark:bg-slate-700 rounded-2xl" style={{ height: 300 }}>
-                              <span className="text-xs font-bold opacity-30">Caricamento...</span>
-                           </div>
-                        )}
-                      </div>
+                {chartDefinitions.map((c, i) => (
+                  <div key={i} className={`${cardClasses} p-4 rounded-3xl border flex flex-col items-center justify-center overflow-hidden`}>
+                    <h3 className="text-[10px] font-black mb-2 uppercase opacity-50 tracking-widest">{c.title}</h3>
+                    <div className="w-full overflow-hidden" style={{ height: 300 }}>
+                      {i <= visibleChartsCount ? (
+                        <ResponsiveContainer width="100%" height={300}>
+                          {c.chart}
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center animate-pulse bg-slate-100 dark:bg-slate-700 rounded-2xl">
+                          <span className="text-xs font-bold opacity-30">Caricamento...</span>
+                        </div>
+                      )}
                     </div>
-                 ))}
+                  </div>
+                ))}
               </div>
             ) : testView === 'dishes' ? (
                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
