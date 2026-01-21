@@ -372,7 +372,12 @@ const App = () => {
   return (
     <div className={`min-h-screen pb-32 transition-colors duration-300 ${themeClasses}`}>
       <style>{`
-        @media print { @page { size: landscape; } nav, .no-print { display: none !important; } .print-area { display: block !important; width: 100% !important; border: none !important; } table { font-size: 8px !important; } }
+        @media print { 
+          @page { size: landscape; } 
+          nav, .no-print { display: none !important; } 
+          .print-area { display: block !important; width: 100% !important; border: none !important; } 
+          table { font-size: 8px !important; } 
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
@@ -381,6 +386,12 @@ const App = () => {
         }
         svg text {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+        .recharts-wrapper {
+          margin: 0 auto !important;
+        }
+        .recharts-surface {
+          overflow: visible !important;
         }
       `}</style>
       
