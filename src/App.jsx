@@ -411,7 +411,7 @@ const App = () => {
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         {isAdmin ? (
           <div className="space-y-8">
-            <div className="flex gap-2 flex-wrap no-print items-center bg-slate-100 dark:bg-slate-800 p-2 rounded-2xl">
+            <div className={`flex gap-2 flex-wrap no-print items-center p-2 rounded-2xl ${darkMode ? 'bg-slate-800' : 'bg-slate-100'}`}>
               {['summary', 'caranzano', 'matrix', 'charts', 'dishes', 'database'].map(v => (
                 <button key={v} onClick={() => setTestView(v)} className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${testView === v ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white dark:hover:bg-slate-700'}`}>{v === 'dishes' ? 'Turni Piatti' : v}</button>
               ))}
