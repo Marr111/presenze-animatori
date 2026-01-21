@@ -376,13 +376,13 @@ const App = () => {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
-      ` *{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
-          }
-          svg text {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-          }
-      }</style>
+        * {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+        }
+        svg text {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        }
+      `}</style>
       
       <nav className={`border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 no-print backdrop-blur-md ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'}`}>
         <div className="font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-xl cursor-pointer" onClick={() => setCurrentUser(null)}>TRACKER 2026</div>
