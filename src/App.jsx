@@ -124,7 +124,6 @@ const App = () => {
     if (confirm("ATTENZIONE ESTREMA:\n\nStai per cancellare TUTTI i dati (presenze e idee) definitivamente.\nQuesta azione non è reversibile.\n\nSei sicuro di voler procedere?")) {
       const emptyData = { availabilities: {}, ideas: [], people: INITIAL_PEOPLE };
       setAvailabilities({});
-      setIdeas([]);
       setPeople(INITIAL_PEOPLE);
       await persistToCloud(emptyData);
       alert("Database resettato con successo.");
