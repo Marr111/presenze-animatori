@@ -33,7 +33,7 @@ const TIME_MAP = {
 };
 
 const INITIAL_PEOPLE = [
-  'Catteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
+  'Matteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Aloi Beatrice',
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
   'Gloria Romano', 'Vittoria Pelassa'
 ].sort();
