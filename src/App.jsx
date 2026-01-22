@@ -253,69 +253,92 @@ const App = () => {
                   </tfoot>
                 </table>
               </div>
-            ) : testView === 'charts' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* 1. Affluenza Timeline */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">1. Andamento Presenze</h3>
-                  <AreaChart width={300} height={180} data={chartsData.timeline}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/>
-                  </AreaChart>
+              ) : testView === 'charts' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* 1. Affluenza Timeline */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">1. Andamento Presenze</h3>
+                    <div aria-hidden="true">
+                      <AreaChart width={300} height={180} data={chartsData.timeline}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Area type="monotone" dataKey="persone" stroke="#6366f1" fill="#6366f122"/>
+                      </AreaChart>
+                    </div>
+                  </div>
+                  
+                  {/* 2. Mix Pasti */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">2. Bilancio Pasti</h3>
+                    <div aria-hidden="true">
+                      <PieChart width={300} height={180}>
+                        <Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
+                          {chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                        </Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/>
+                      </PieChart>
+                    </div>
+                  </div>
+                  
+                  {/* 3. Impegni Staff */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">3. Classifica Impegni</h3>
+                    <div aria-hidden="true">
+                      <BarChart width={300} height={180} data={chartsData.staffActivity.slice(0, 6)}>
+                        <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/>
+                      </BarChart>
+                    </div>
+                  </div>
+                  
+                  {/* 4. Radar Copertura */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">4. Analisi Fasce Orarie</h3>
+                    <div aria-hidden="true">
+                      <RadarChart cx={150} cy={90} outerRadius={60} width={300} height={180} data={chartsData.radar}>
+                        <PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/>
+                      </RadarChart>
+                    </div>
+                  </div>
+                  
+                  {/* 5. Debiti (€) */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">5. Stato Pagamenti</h3>
+                    <div aria-hidden="true">
+                      <BarChart width={300} height={180} data={chartsData.debtData}>
+                        <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/>
+                      </BarChart>
+                    </div>
+                  </div>
+                  
+                  {/* 6. Affluenza Giorno */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">6. Volume per Giorno</h3>
+                    <div aria-hidden="true">
+                      <BarChart width={300} height={180} data={chartsData.dailyTotal}>
+                        <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/>
+                      </BarChart>
+                    </div>
+                  </div>
+                  
+                  {/* 7. Mix Categorie */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">7. Tipologia Attività</h3>
+                    <div aria-hidden="true">
+                      <PieChart width={300} height={180}>
+                        <Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
+                          {chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}
+                        </Pie><Tooltip/>
+                      </PieChart>
+                    </div>
+                  </div>
+                  
+                  {/* 8. Trend Fasce Principali */}
+                  <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                    <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">8. Trend Giornaliero</h3>
+                    <div aria-hidden="true">
+                      <LineChart width={300} height={180} data={chartsData.lineData}>
+                        <CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" />
+                      </LineChart>
+                    </div>
+                  </div>
                 </div>
-                {/* 2. Mix Pasti */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">2. Bilancio Pasti</h3>
-                  <PieChart width={300} height={180}>
-                    <Pie data={chartsData.mealsMix} cx="50%" cy="50%" innerRadius={40} outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
-                      {chartsData.mealsMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                    </Pie><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 10}}/>
-                  </PieChart>
-                </div>
-                {/* 3. Impegni Staff */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">3. Classifica Impegni</h3>
-                  <BarChart width={300} height={180} data={chartsData.staffActivity.slice(0, 6)}>
-                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="impegni" fill="#8b5cf6" radius={[4,4,0,0]}/>
-                  </BarChart>
-                </div>
-                {/* 4. Radar Copertura */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">4. Analisi Fasce Orarie</h3>
-                  <RadarChart cx={150} cy={90} outerRadius={60} width={300} height={180} data={chartsData.radar}>
-                    <PolarGrid/><PolarAngleAxis dataKey="subject" tick={{fontSize: 8}}/><Radar dataKey="A" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6}/>
-                  </RadarChart>
-                </div>
-                {/* 5. Debiti (€) */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">5. Stato Pagamenti</h3>
-                  <BarChart width={300} height={180} data={chartsData.debtData}>
-                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="euro" fill="#10b981" radius={[4,4,0,0]}/>
-                  </BarChart>
-                </div>
-                {/* 6. Affluenza Giorno */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">6. Volume per Giorno</h3>
-                  <BarChart width={300} height={180} data={chartsData.dailyTotal}>
-                    <XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Bar dataKey="totale" fill="#ec4899" radius={[4,4,0,0]}/>
-                  </BarChart>
-                </div>
-                {/* 7. Mix Categorie */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">7. Tipologia Attività</h3>
-                  <PieChart width={300} height={180}>
-                    <Pie data={chartsData.categoryMix} cx="50%" cy="50%" outerRadius={60} fill="#8884d8" dataKey="value" label={{fontSize: 8}}>
-                      {chartsData.categoryMix.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[(index + 4) % COLORS.length]} />)}
-                    </Pie><Tooltip/>
-                  </PieChart>
-                </div>
-                {/* 8. Trend Fasce Principali */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
-                  <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">8. Trend Giornaliero</h3>
-                  <LineChart width={300} height={180} data={chartsData.lineData}>
-                    <CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name" tick={{fontSize: 8}}/><YAxis tick={{fontSize: 8}}/><Tooltip/><Legend iconSize={8} wrapperStyle={{fontSize: 8}}/><Line type="monotone" dataKey="Mattino" stroke="#6366f1" /><Line type="monotone" dataKey="Sera" stroke="#f43f5e" />
-                  </LineChart>
-                </div>
-              </div>
             ) : testView === 'caranzano' ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {DATES.map(d => (
