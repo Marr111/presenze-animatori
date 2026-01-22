@@ -574,6 +574,33 @@ const App = () => {
                   </div>
                 </div>
               </div>
+            ) : testView === 'dishes' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {dishwasherSchedule.map((item, idx) => (
+                  <div key={idx} className={`${cardClasses} p-6 rounded-3xl border relative overflow-hidden`}>
+                    <div className="absolute top-0 right-0 p-4 opacity-10"><Sparkles size={40}/></div>
+                    <h3 className="font-black text-lg mb-1">{item.date}</h3>
+                    <span className="inline-block px-2 py-1 rounded bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 text-xs font-bold uppercase mb-4">{item.slot}</span>
+                    
+                    {item.crew.length < 3 && (
+                      <div className="mb-3 flex items-center gap-2 text-amber-500 text-xs font-bold bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg">
+                        <AlertTriangle size={14} /> Pochi presenti ({item.totalPresent})
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <div className="text-[10px] uppercase font-bold opacity-50 tracking-widest">Squadra lavaggio</div>
+                      {item.crew.map(p => (
+                        <div key={p} className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white flex items-center justify-center text-[9px] font-black">{getInitials(p)}</div>
+                          <span className="font-bold text-sm">{p}</span>
+                        </div>
+                      ))}
+                      {item.crew.length === 0 && <span className="text-sm italic opacity-50">Nessuno disponibile</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : testView === 'caranzano' ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {DATES.map(d => (
