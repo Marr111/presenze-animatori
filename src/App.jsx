@@ -448,7 +448,7 @@ const App = () => {
                     <button onClick={handleResetData} className="group relative overflow-hidden bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 hover:border-red-500 transition-all text-left shadow-lg hover:shadow-red-500/20">
                        <div className="flex items-center gap-3 mb-4 text-red-500">
                           <Skull size={24}/>
-                          <span className="font-black uppercase tracking-widest text-xs">Danger Zone</span>
+                          <span className="font-black uppercase tracking-widest text-xs">Reset Mode</span>
                        </div>
                        <h4 className="text-lg font-bold mb-2">Reset Totale</h4>
                        <p className="text-xs opacity-60">Cancella ogni singola presenza, idea e dato inserito. Riporta l'app allo stato iniziale vuoto.</p>
