@@ -49,7 +49,7 @@ const App = () => {
   const [newIdea, setNewIdea] = useState("");
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
   // --- SINCRONIZZAZIONE DATI ---
