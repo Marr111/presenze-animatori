@@ -19,7 +19,6 @@ Applicazione web moderna per la gestione e il monitoraggio degli animatori, cost
 - [Tecnologie Utilizzate](#️-tecnologie-utilizzate)
 - [Design e UI](#-design-e-ui)
 - [Performance](#-performance)
-- [Roadmap](#️-roadmap)
 - [Contribuire](#-contribuire)
 - [Setup e Installazione](#-setup-e-installazione)
 - [Deployment](#-deployment)
@@ -36,15 +35,16 @@ Applicazione web moderna per la gestione e il monitoraggio degli animatori, cost
 
 ### Problemi Risolti
 
-- ❌ **Registri cartacei** difficili da gestire e perdere
-- ❌ **Calcolo manuale** delle ore e delle presenze
-- ❌ **Mancanza di statistiche** in tempo reale
-- ❌ **Difficoltà nel tracciare** le assenze e i trend
+- ❌ **File Excel condiviso** scomodo e lento da gestire
+- ❌ **Pessima esperienza mobile** - di difficile utilizzo su mobile sopratutto da iphone
+- ❌ **Calcoli manuali** lenti 
+- ❌ **Nessuna statistica visuale** o grafico automatico
+- ❌ **Accesso non simultaneo** - impossibile modificare insieme
 
 ### Vantaggi
 
 - ✅ **Accesso immediato** da smartphone, tablet o PC
-- ✅ **Calcoli automatici** di ore, presenze e statistiche
+- ✅ **Calcoli automatici istantanei** di ore, presenze e statistiche
 - ✅ **Visualizzazione chiara** con grafici e dashboard
 - ✅ **Dati sempre disponibili** e mai perduti
 - ✅ **Interfaccia intuitiva** utilizzabile da chiunque
@@ -76,8 +76,7 @@ Applicazione web moderna per la gestione e il monitoraggio degli animatori, cost
 
 ### 📈 Statistiche e Report
 
-- **Grafici mensili** delle presenze totali
-- **Percentuale di presenza** per ogni animatore
+- **Grafici** delle presenze totali
 - **Trend temporali** per identificare pattern
 - **Report esportabili** (prossimamente in PDF/Excel)
 
@@ -86,7 +85,7 @@ Applicazione web moderna per la gestione e il monitoraggio degli animatori, cost
 - **Ottimizzato per mobile** - registra presenze ovunque
 - **Interfaccia tablet-friendly** - ideale per reception
 - **Desktop completo** - per gestione e statistiche
-- **Tema chiaro/scuro** (in sviluppo)
+- **Tema chiaro/scuro** 
 
 ---
 
@@ -100,15 +99,6 @@ Prova l'applicazione live: **[presenze-animatori.vercel.app](https://presenze-an
 2. Esplora la dashboard
 3. Registra una presenza di test
 4. Visualizza le statistiche
-
-### Screenshots
-```
-// Da aggiungere:
-- Homepage con dashboard
-- Schermata registrazione presenza
-- Pagina statistiche con grafici
-- Vista mobile responsive
-```
 
 ---
 
@@ -181,35 +171,6 @@ Prova l'applicazione live: **[presenze-animatori.vercel.app](https://presenze-an
 
 ---
 
-## 🗺️ Roadmap
-
-### ✅ Fase 1 - MVP (Completata)
-
-- [x] Sistema base di registrazione presenze
-- [x] Dashboard con statistiche essenziali
-- [x] Registro animatori
-- [x] Design responsive
-- [x] Deploy su Vercel
-
-### 🔨 Fase 2 - Miglioramenti (In Corso)
-
-- [ ] **Esportazione dati** in PDF ed Excel
-- [ ] **Tema scuro** per uso notturno
-- [ ] **Notifiche push** per promemoria
-- [ ] **Backup automatico** dei dati
-- [ ] **Filtri avanzati** nelle statistiche
-
-### 🚀 Fase 3 - Features Avanzate (Futuro)
-
-- [ ] **Backend con database** (Firebase/Supabase)
-- [ ] **Autenticazione utenti** multi-ruolo
-- [ ] **Sistema turni** e pianificazione
-- [ ] **Calendario eventi** integrato
-- [ ] **App mobile nativa** (React Native)
-- [ ] **API pubblica** per integrazioni
-
----
-
 ## 🤝 Contribuire
 
 Il progetto è aperto a contributi! Se vuoi aiutare:
@@ -225,8 +186,6 @@ Il progetto è aperto a contributi! Se vuoi aiutare:
 
 - 🐛 Testing su diversi browser e dispositivi
 - 🎨 Miglioramenti UI/UX
-- 📚 Documentazione e tutorial
-- 🌍 Traduzioni in altre lingue
 - ♿ Miglioramenti accessibilità
 
 ### Pull Request Guidelines
@@ -326,19 +285,16 @@ vercel --prod
 ## ❓ FAQ
 
 **Q: L'app salva i dati in modo permanente?**  
-A: Attualmente usa localStorage del browser. Il backup su database cloud è in roadmap.
+A: Si, utilizza un database.
 
 **Q: Posso usarla offline?**  
 A: Parzialmente. Una volta caricata, funziona offline ma serve connessione per aggiornamenti.
-
-**Q: È sicura per dati sensibili?**  
-A: I dati rimangono sul dispositivo. Per uso professionale, consiglio implementazione con backend sicuro.
 
 **Q: Posso personalizzare l'interfaccia?**  
 A: Sì! Il codice è open-source, modifica colori e layout a piacimento.
 
 **Q: Supporta più gruppi di animatori?**  
-A: Attualmente no, ma è previsto nelle prossime versioni con sistema multi-tenant.
+A: Si, supporta il cambio di nominativi e di date.
 
 **Q: Come posso segnalare un bug?**  
 A: Apri una issue su GitHub con descrizione dettagliata e screenshot.
@@ -370,7 +326,7 @@ Permesso di uso, copia, modifica e distribuzione per qualsiasi scopo.
 ### Sviluppo e Design
 
 - **Sviluppo principale**: Marr111
-- **Assistenza UI/UX e grafica**: AI (Claude/ChatGPT) - Supporto per design interfaccia, scelte cromatiche e ottimizzazioni visual
+- **Assistenza UI/UX e grafica**: AI (Claude/Gemini) - Supporto per design interfaccia, scelte cromatiche e ottimizzazioni visual
 - **Framework**: React Team, Vite Team
 
 ### Tools e Risorse
