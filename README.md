@@ -252,29 +252,14 @@ Aggiungi le stesse variabili su **Vercel Dashboard** → Settings → Environmen
 
 - ✅ Registra presenza giornaliera
 - 📅 Visualizza calendario presenze
-- ⏱️ Tracciamento ore lavorate
 - 📊 Esporta report presenze
 
-### 2. Registro Animatori
-
-- 👤 Profilo dettagliato animatore
-- 📝 Informazioni contatto
-- 🏷️ Ruoli e competenze
-- 📸 Foto profilo (opzionale)
-
-### 3. Dashboard Statistiche
+### 2. Dashboard Statistiche
 
 - 📈 Grafici presenze mensili
 - 🔢 Totale ore per animatore
 - 📊 Tasso di presenza medio
 - 📉 Trend presenze
-
-### 4. Filtri e Ricerca
-
-- 🔍 Cerca per nome animatore
-- 📅 Filtra per data/periodo
-- 🏷️ Filtra per ruolo
-- 📑 Ordina risultati
 
 ---
 
