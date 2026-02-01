@@ -5,7 +5,7 @@
 
 # 📋 Presenze Animatori - Sistema Gestione Presenze
 
-Applicazione web moderna per la gestione e il monitoraggio delle presenze degli animatori, costruita con **React** e **Vite**, deployata automaticamente su **Vercel**.
+Applicazione web moderna per la gestione e il monitoraggio degli animatori, costruita con **React** e **Vite**, deployata automaticamente su **Vercel**.
 
 🌐 **Live Demo**: [presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)
 
