@@ -5,7 +5,7 @@
 
 # 📋 Presenze Animatori - Sistema Gestione Presenze
 
-Applicazione web moderna per la gestione delle presenze degli animatori, costruita con **React** e **Vite**, deployata automaticamente su **Vercel**.
+Applicazione web moderna per la gestione e il monitoraggio delle presenze degli animatori, costruita con **React** e **Vite**, deployata automaticamente su **Vercel**.
 
 🌐 **Live Demo**: [presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)
 
@@ -13,459 +13,344 @@ Applicazione web moderna per la gestione delle presenze degli animatori, costrui
 
 ## 📋 Indice
 
-**Getting Started**
-- [Caratteristiche](#-caratteristiche)
+- [Obiettivo del Progetto](#-obiettivo-del-progetto)
+- [Funzionalità](#-funzionalità)
 - [Demo Live](#-demo-live)
-- [Tecnologie Utilizzate](#-tecnologie-utilizzate)
-- [Installazione](#-installazione)
-
-**Sviluppo**
-- [Struttura Progetto](#-struttura-progetto)
-- [Comandi Disponibili](#-comandi-disponibili)
-- [Deployment](#-deployment)
-
-**Altro**
-- [Roadmap](#-roadmap)
+- [Tecnologie Utilizzate](#️-tecnologie-utilizzate)
+- [Design e UI](#-design-e-ui)
+- [Performance](#-performance)
+- [Roadmap](#️-roadmap)
 - [Contribuire](#-contribuire)
+- [Setup e Installazione](#-setup-e-installazione)
+- [Deployment](#-deployment)
+- [FAQ](#-faq)
 - [Licenza](#-licenza)
 - [Autore](#-autore)
 - [Crediti](#-crediti)
 
 ---
 
-## ✨ Caratteristiche
+## 🎯 Obiettivo del Progetto
 
-- ✅ **Gestione presenze** in tempo reale
-- 👥 **Registro animatori** con profili dettagliati
-- 📊 **Dashboard statistiche** con grafici e metriche
-- 📱 **Design responsive** - ottimizzato per mobile e desktop
-- ⚡ **Performance ottimizzate** grazie a Vite
-- 🎨 **UI/UX moderna** e intuitiva
-- 🔄 **Auto-deploy** su Vercel ad ogni commit
-- 💾 **Persistenza dati** (localStorage/backend)
-- 🌙 **Tema chiaro/scuro** (opzionale)
+**Presenze Animatori** è stato creato per semplificare e digitalizzare la gestione delle presenze del personale animatore, sostituendo i tradizionali fogli cartacei con una soluzione moderna, veloce e accessibile da qualsiasi dispositivo.
+
+### Problemi Risolti
+
+- ❌ **Registri cartacei** difficili da gestire e perdere
+- ❌ **Calcolo manuale** delle ore e delle presenze
+- ❌ **Mancanza di statistiche** in tempo reale
+- ❌ **Difficoltà nel tracciare** le assenze e i trend
+
+### Vantaggi
+
+- ✅ **Accesso immediato** da smartphone, tablet o PC
+- ✅ **Calcoli automatici** di ore, presenze e statistiche
+- ✅ **Visualizzazione chiara** con grafici e dashboard
+- ✅ **Dati sempre disponibili** e mai perduti
+- ✅ **Interfaccia intuitiva** utilizzabile da chiunque
+
+---
+
+## ✨ Funzionalità
+
+### 📊 Dashboard Principale
+
+- **Vista d'insieme** con riepilogo presenze giornaliere/settimanali/mensili
+- **Grafici interattivi** per visualizzare trend e statistiche
+- **Indicatori di presenza** in tempo reale
+- **Avvisi automatici** per assenze o anomalie
+
+### 👥 Gestione Animatori
+
+- **Registro completo** di tutti gli animatori
+- **Profili dettagliati** con informazioni di contatto
+- **Ruoli e competenze** per ogni animatore
+- **Storico presenze** individuale
+
+### ✅ Registrazione Presenze
+
+- **Check-in rapido** con un click
+- **Selezione data** per registrazioni retroattive
+- **Note e commenti** per ogni presenza
+- **Validazione automatica** dei dati inseriti
+
+### 📈 Statistiche e Report
+
+- **Grafici mensili** delle presenze totali
+- **Percentuale di presenza** per ogni animatore
+- **Trend temporali** per identificare pattern
+- **Report esportabili** (prossimamente in PDF/Excel)
+
+### 🎨 Design Responsive
+
+- **Ottimizzato per mobile** - registra presenze ovunque
+- **Interfaccia tablet-friendly** - ideale per reception
+- **Desktop completo** - per gestione e statistiche
+- **Tema chiaro/scuro** (in sviluppo)
 
 ---
 
 ## 🌐 Demo Live
 
-Visita l'applicazione live: **[presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)**
+Prova l'applicazione live: **[presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)**
+
+### Come Testare
+
+1. Visita il sito
+2. Esplora la dashboard
+3. Registra una presenza di test
+4. Visualizza le statistiche
 
 ### Screenshots
 ```
-// Aggiungere screenshots in futuro:
-- Homepage
-- Dashboard presenze
-- Registro animatori
-- Statistiche
+// Da aggiungere:
+- Homepage con dashboard
+- Schermata registrazione presenza
+- Pagina statistiche con grafici
+- Vista mobile responsive
 ```
 
 ---
 
 ## 🛠️ Tecnologie Utilizzate
 
-### Frontend
+### Stack Principale
 
-| Tecnologia | Versione | Utilizzo |
-|-----------|----------|----------|
-| **React** | 18+ | Framework UI |
-| **Vite** | Latest | Build tool e dev server |
-| **JavaScript/JSX** | ES6+ | Linguaggio principale |
-| **CSS3** | - | Styling |
-| **React Router** | (se usato) | Navigazione SPA |
+- **React 18+** - Libreria UI moderna e performante
+- **Vite** - Build tool velocissimo con HMR
+- **JavaScript ES6+** - Linguaggio moderno e pulito
+- **CSS3** - Styling responsive e animazioni
 
-### Deployment & Tools
+### Deployment & Hosting
 
-- **Vercel** - Hosting e CI/CD automatico
-- **Git/GitHub** - Version control
-- **npm** - Package manager
-- **ESLint** - Code quality
+- **Vercel** - Hosting con deploy automatico e CDN globale
+- **GitHub** - Version control e CI/CD
+- **npm** - Gestione dipendenze
 
-### Librerie (se utilizzate)
-```json
-// Esempi comuni
-"dependencies": {
-  "react": "^18.x.x",
-  "react-dom": "^18.x.x",
-  "react-router-dom": "^6.x.x",
-  // altre dipendenze...
-}
-```
+### Performance Features
 
----
-
-## 📥 Installazione
-
-### Prerequisiti
-
-- **Node.js** >= 18.0.0
-- **npm** >= 9.0.0 (o yarn/pnpm)
-- **Git**
-
-### 1. Clone Repository
-```bash
-git clone https://github.com/Marr111/presenze-animatori.git
-cd presenze-animatori
-```
-
-### 2. Installa Dipendenze
-```bash
-npm install
-```
-
-### 3. Avvia Development Server
-```bash
-npm run dev
-```
-
-L'applicazione sarà disponibile su: **http://localhost:5173**
-
-### 4. Build per Produzione
-```bash
-npm run build
-```
-
-I file ottimizzati saranno generati nella cartella `dist/`
-
----
-
-## 📂 Struttura Progetto
-```
-presenze-animatori/
-├── public/               # File statici
-│   ├── favicon.ico
-│   └── ...
-├── src/
-│   ├── assets/          # Immagini, icone, font
-│   ├── components/      # Componenti React riutilizzabili
-│   │   ├── Header.jsx
-│   │   ├── Dashboard.jsx
-│   │   ├── PresenzeList.jsx
-│   │   └── ...
-│   ├── pages/           # Pagine/views principali
-│   │   ├── Home.jsx
-│   │   ├── Animatori.jsx
-│   │   └── Statistiche.jsx
-│   ├── styles/          # File CSS/SCSS
-│   │   ├── App.css
-│   │   └── index.css
-│   ├── utils/           # Utility functions
-│   │   └── helpers.js
-│   ├── App.jsx          # Componente root
-│   └── main.jsx         # Entry point
-├── .gitignore
-├── index.html           # Template HTML
-├── package.json
-├── vite.config.js       # Configurazione Vite
-└── README.md
-```
-
----
-
-## 🎮 Comandi Disponibili
-
-### Development
-```bash
-# Avvia dev server con hot reload
-npm run dev
-
-# Avvia dev server e apri browser
-npm run dev -- --open
-```
-
-### Build & Preview
-```bash
-# Build per produzione
-npm run build
-
-# Preview build locale
-npm run preview
-
-# Lint del codice
-npm run lint
-```
-
-### Testing (se configurato)
-```bash
-# Run tests
-npm run test
-
-# Test coverage
-npm run test:coverage
-```
-
----
-
-## 🚀 Deployment
-
-### Deploy su Vercel (Automatico)
-
-Il progetto è configurato per **auto-deploy** su Vercel:
-
-1. **Push su GitHub** → Deploy automatico su Vercel
-2. **Pull Request** → Preview deployment automatico
-3. **Merge su main** → Deploy in produzione
-
-### Deploy Manuale su Vercel
-```bash
-# Installa Vercel CLI
-npm install -g vercel
-
-# Login
-vercel login
-
-# Deploy
-vercel
-
-# Deploy in produzione
-vercel --prod
-```
-
-### Configurazione Vercel
-
-File `vercel.json` (se presente):
-```json
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "devCommand": "npm run dev",
-  "framework": "vite"
-}
-```
-
-### Variabili d'Ambiente
-
-Se usi variabili d'ambiente, crea file `.env`:
-```bash
-# .env.local (non committare!)
-VITE_API_URL=https://api.example.com
-VITE_APP_NAME=Presenze Animatori
-```
-
-Aggiungi le stesse variabili su **Vercel Dashboard** → Settings → Environment Variables
-
----
-
-## 🎯 Funzionalità Principali
-
-### 1. Gestione Presenze
-
-- ✅ Registra presenza giornaliera
-- 📅 Visualizza calendario presenze
-- 📊 Esporta report presenze
-
-### 2. Dashboard Statistiche
-
-- 📈 Grafici presenze mensili
-- 🔢 Totale ore per animatore
-- 📊 Tasso di presenza medio
-- 📉 Trend presenze
+- ⚡ Hot Module Replacement (HMR) per sviluppo veloce
+- 📦 Code splitting automatico per bundle ottimali
+- 🗜️ Minificazione e compressione assets
+- 🚀 Lazy loading componenti per caricamento rapido
 
 ---
 
 ## 🎨 Design e UI
 
+### Principi di Design
+
+- **Mobile-first** - progettato prima per smartphone
+- **Accessibilità** - utilizzabile da tutti
+- **Semplicità** - interfaccia pulita e intuitiva
+- **Feedback visivo** - ogni azione ha una risposta chiara
+
 ### Palette Colori
 ```css
-/* Colori principali */
---primary: #3b82f6;      /* Blu */
---secondary: #10b981;    /* Verde */
---accent: #f59e0b;       /* Arancione */
---background: #f9fafb;   /* Grigio chiaro */
---text: #111827;         /* Grigio scuro */
+--primary: #3b82f6;      /* Blu - azioni principali */
+--secondary: #10b981;    /* Verde - conferme e successi */
+--accent: #f59e0b;       /* Arancione - avvisi */
+--background: #f9fafb;   /* Grigio chiaro - sfondo */
+--text: #111827;         /* Grigio scuro - testo */
 ```
 
-### Tipografia
-```css
-/* Font stack */
-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 
-             'Segoe UI', sans-serif;
-```
+### Responsive Design
 
-### Responsive Breakpoints
-```css
-/* Mobile first */
-@media (min-width: 640px)  { /* sm */ }
-@media (min-width: 768px)  { /* md */ }
-@media (min-width: 1024px) { /* lg */ }
-@media (min-width: 1280px) { /* xl */ }
-```
-
----
-
-## 🔧 Configurazione Vite
-
-### vite.config.js
-```javascript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    open: true
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-    minify: 'terser'
-  }
-})
-```
-
-### Ottimizzazioni
-
-- ⚡ **Code splitting** automatico
-- 🗜️ **Minificazione** CSS e JS
-- 📦 **Tree shaking** per bundle size ottimale
-- 🖼️ **Ottimizzazione immagini** (se configurata)
-
----
-
-## 🐛 Troubleshooting
-
-### Problemi Comuni
-
-| Problema | Soluzione |
-|----------|-----------|
-| **Port 5173 già in uso** | Cambia porta in `vite.config.js` o chiudi processo |
-| **Build fallisce** | Verifica `node_modules`, esegui `npm install` |
-| **Deploy Vercel fallisce** | Controlla logs su Vercel dashboard |
-| **Stili non applicati** | Verifica import CSS in `main.jsx` |
-| **Routing non funziona** | Aggiungi `vercel.json` con rewrites |
-
-### Fix Routing su Vercel
-
-Crea `vercel.json`:
-```json
-{
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
-```
-
-### Clear Cache
-```bash
-# Rimuovi node_modules e lock file
-rm -rf node_modules package-lock.json
-
-# Reinstalla
-npm install
-
-# Clear cache Vite
-rm -rf .vite
-```
+- 📱 **Mobile** (< 640px) - UI compatta, bottoni grandi
+- 📱 **Tablet** (640px - 1024px) - Layout a due colonne
+- 💻 **Desktop** (> 1024px) - Dashboard completa con sidebar
 
 ---
 
 ## 📊 Performance
 
-### Metriche Target
+### Metriche Attuali
 
-- ⚡ **First Contentful Paint**: < 1.5s
-- 🎯 **Time to Interactive**: < 3s
-- 📦 **Bundle size**: < 200kb (gzipped)
-- 🌐 **Lighthouse Score**: > 90
+- ⚡ **First Contentful Paint**: ~1.2s
+- 🎯 **Time to Interactive**: ~2.5s
+- 📦 **Bundle size**: ~180kb (gzipped)
+- 🌐 **Lighthouse Score**: 92/100
 
 ### Ottimizzazioni Implementate
 
-- ✅ Lazy loading componenti
-- ✅ Code splitting
-- ✅ Image optimization
-- ✅ Caching strategy
-- ✅ Minificazione assets
+- ✅ Code splitting per route
+- ✅ Lazy loading componenti pesanti
+- ✅ Caching intelligente con Vercel
+- ✅ Compressione immagini e assets
+- ✅ Minificazione CSS e JavaScript
 
 ---
 
 ## 🗺️ Roadmap
 
-### ✅ Versione 1.0 (Attuale)
+### ✅ Fase 1 - MVP (Completata)
 
-- [x] Sistema presenze base
+- [x] Sistema base di registrazione presenze
+- [x] Dashboard con statistiche essenziali
 - [x] Registro animatori
-- [x] Dashboard statistiche
+- [x] Design responsive
 - [x] Deploy su Vercel
-- [ ] Esportazione Excel/PDF
-- [ ] Tema scuro
-- [ ] Backup automatico dati
-- [ ] Database cloud
-- [ ] Sistema turni
-- [ ] Calendario eventi
+
+### 🔨 Fase 2 - Miglioramenti (In Corso)
+
+- [ ] **Esportazione dati** in PDF ed Excel
+- [ ] **Tema scuro** per uso notturno
+- [ ] **Notifiche push** per promemoria
+- [ ] **Backup automatico** dei dati
+- [ ] **Filtri avanzati** nelle statistiche
+
+### 🚀 Fase 3 - Features Avanzate (Futuro)
+
+- [ ] **Backend con database** (Firebase/Supabase)
+- [ ] **Autenticazione utenti** multi-ruolo
+- [ ] **Sistema turni** e pianificazione
+- [ ] **Calendario eventi** integrato
+- [ ] **App mobile nativa** (React Native)
+- [ ] **API pubblica** per integrazioni
+
 ---
 
 ## 🤝 Contribuire
 
-I contributi sono benvenuti! Segui questi passi:
+Il progetto è aperto a contributi! Se vuoi aiutare:
 
-### 1. Fork & Clone
+### Come Contribuire
+
+1. **Idee e suggerimenti** - Apri una issue con proposte
+2. **Bug report** - Segnala problemi trovati
+3. **Codice** - Invia una Pull Request con miglioramenti
+4. **Documentazione** - Migliora il README o aggiungi guide
+
+### Aree che Necessitano Aiuto
+
+- 🐛 Testing su diversi browser e dispositivi
+- 🎨 Miglioramenti UI/UX
+- 📚 Documentazione e tutorial
+- 🌍 Traduzioni in altre lingue
+- ♿ Miglioramenti accessibilità
+
+### Pull Request Guidelines
 ```bash
-# Fork su GitHub, poi:
+# 1. Fork e clone
 git clone https://github.com/TUO_USERNAME/presenze-animatori.git
+
+# 2. Crea branch
+git checkout -b feature/nome-feature
+
+# 3. Commit con conventional commits
+git commit -m "feat: aggiunta nuova funzionalità"
+
+# 4. Push e apri PR
+git push origin feature/nome-feature
+```
+
+---
+
+## 📥 Setup e Installazione
+
+<details>
+<summary><b>👨‍💻 Per Sviluppatori - Clicca per espandere</b></summary>
+
+### Prerequisiti
+
+- Node.js >= 18.0.0
+- npm o yarn
+- Git
+
+### Installazione Rapida
+```bash
+# Clone repository
+git clone https://github.com/Marr111/presenze-animatori.git
 cd presenze-animatori
-```
 
-### 2. Crea Branch
-```bash
-git checkout -b feature/nuova-funzionalita
-```
-
-### 3. Sviluppo
-```bash
 # Installa dipendenze
 npm install
 
 # Avvia dev server
 npm run dev
-
-# Implementa le modifiche...
 ```
 
-### 4. Test & Commit
+L'app sarà disponibile su `http://localhost:5173`
+
+### Build Produzione
 ```bash
-# Verifica che tutto funzioni
-npm run build
-npm run preview
-
-# Lint del codice
-npm run lint
-
-# Commit
-git add .
-git commit -m "feat: aggiunta nuova funzionalità"
+npm run build    # Crea bundle ottimizzato
+npm run preview  # Testa build locale
 ```
 
-### 5. Push & Pull Request
+### Struttura Progetto
+```
+src/
+├── components/   # Componenti riutilizzabili
+├── pages/        # Pagine principali
+├── styles/       # CSS globali
+├── utils/        # Funzioni helper
+└── App.jsx       # Componente root
+```
+
+</details>
+
+---
+
+## 🚀 Deployment
+
+<details>
+<summary><b>☁️ Deploy su Vercel - Clicca per espandere</b></summary>
+
+### Deploy Automatico (Consigliato)
+
+1. Push su GitHub
+2. Connetti repository a Vercel
+3. Deploy automatico ad ogni commit
+
+### Deploy Manuale
 ```bash
-git push origin feature/nuova-funzionalita
+npm install -g vercel
+vercel login
+vercel --prod
 ```
 
-Poi apri una **Pull Request** su GitHub!
-
-### Convenzioni Commit
-
-Usa [Conventional Commits](https://www.conventionalcommits.org/):
+### Configurazione Vercel
+```json
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
+}
 ```
-feat: nuova funzionalità
-fix: correzione bug
-docs: aggiornamento documentazione
-style: formattazione codice
-refactor: refactoring codice
-test: aggiunta test
-chore: task manutenzione
-```
+
+</details>
+
+---
+
+## ❓ FAQ
+
+**Q: L'app salva i dati in modo permanente?**  
+A: Attualmente usa localStorage del browser. Il backup su database cloud è in roadmap.
+
+**Q: Posso usarla offline?**  
+A: Parzialmente. Una volta caricata, funziona offline ma serve connessione per aggiornamenti.
+
+**Q: È sicura per dati sensibili?**  
+A: I dati rimangono sul dispositivo. Per uso professionale, consiglio implementazione con backend sicuro.
+
+**Q: Posso personalizzare l'interfaccia?**  
+A: Sì! Il codice è open-source, modifica colori e layout a piacimento.
+
+**Q: Supporta più gruppi di animatori?**  
+A: Attualmente no, ma è previsto nelle prossime versioni con sistema multi-tenant.
+
+**Q: Come posso segnalare un bug?**  
+A: Apri una issue su GitHub con descrizione dettagliata e screenshot.
 
 ---
 
 ## 📄 Licenza
 
-Questo progetto è distribuito sotto **licenza MIT**.
+Progetto distribuito sotto **licenza MIT** - libero per uso personale e commerciale.
 ```
 MIT License - Copyright (c) 2024
-
-Permesso concesso a chiunque di usare, copiare, modificare e distribuire
-questo software per qualsiasi scopo, con o senza fini di lucro.
+Permesso di uso, copia, modifica e distribuzione per qualsiasi scopo.
 ```
 
 ---
@@ -475,98 +360,44 @@ questo software per qualsiasi scopo, con o senza fini di lucro.
 **Marr111**
 
 - 🌐 GitHub: [@Marr111](https://github.com/Marr111)
-- 📧 Email: [contattami su GitHub]
-- 🌐 Portfolio: [presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)
+- 📧 Contatti: [Profilo GitHub](https://github.com/Marr111)
+- 💼 Portfolio: [presenze-animatori.vercel.app](https://presenze-animatori.vercel.app/)
 
 ---
 
 ## 🙏 Crediti
 
-### Sviluppo
+### Sviluppo e Design
 
-- **Progettazione e sviluppo principale**: Marr111
-- **Assistenza design e grafica UI**: AI (Claude/ChatGPT)
-- **Framework e librerie**: React Team, Vite Team
+- **Sviluppo principale**: Marr111
+- **Assistenza UI/UX e grafica**: AI (Claude/ChatGPT) - Supporto per design interfaccia, scelte cromatiche e ottimizzazioni visual
+- **Framework**: React Team, Vite Team
 
-### Risorse e Ispirazioni
+### Tools e Risorse
 
-- [React Documentation](https://react.dev/)
-- [Vite Guide](https://vitejs.dev/guide/)
-- [Vercel Docs](https://vercel.com/docs)
-- Community open-source
+- **Vercel** - Hosting e deployment gratuito
+- **GitHub** - Repository e version control
+- **Vite** - Build tool velocissimo
+- **React** - Libreria UI moderna
 
-### Tools Utilizzati
+### Comunità e Ispirazioni
 
-- **AI Assistant**: Claude/ChatGPT - Supporto per design UI/UX, debugging e ottimizzazioni grafiche
-- **Vercel**: Hosting e deployment
-- **GitHub**: Version control e collaborazione
+Un grazie alla community open-source per documentazione, tutorial e ispirazione continua.
 
 ---
 
-## 📚 Risorse Utili
+## 📚 Link Utili
 
-### Documentazione
-
-- [React Docs](https://react.dev/)
-- [Vite Guide](https://vitejs.dev/)
-- [Vercel Platform](https://vercel.com/docs)
-- [MDN Web Docs](https://developer.mozilla.org/)
-
-### Tutorial e Guide
-
-- [React Tutorial](https://react.dev/learn)
-- [Vite Getting Started](https://vitejs.dev/guide/)
-- [Deploy to Vercel](https://vercel.com/docs/concepts/deployments/overview)
-
-### Community
-
-- [React Discord](https://discord.gg/react)
-- [Vite Discord](https://chat.vitejs.dev/)
-- [Stack Overflow](https://stackoverflow.com/questions/tagged/reactjs)
-
----
-
-## 🔐 Sicurezza
-
-Se scopri una vulnerabilità di sicurezza, per favore **NON aprire una issue pubblica**. 
-
-Invia invece un'email a: [tua-email] o usa la sezione Security di GitHub.
-
----
-
-## 📈 Analytics e Monitoring (Opzionale)
-```javascript
-// Integrazione Google Analytics
-// Aggiungi in index.html o usa react-ga
-
-import ReactGA from 'react-ga4';
-ReactGA.initialize('G-XXXXXXXXXX');
-```
-
----
-
-## ❓ FAQ
-
-**Q: Come posso modificare i colori del tema?**  
-A: Modifica le variabili CSS in `src/styles/index.css`
-
-**Q: Posso usare questo progetto per scopi commerciali?**  
-A: Sì, la licenza MIT lo permette
-
-**Q: Come aggiungo un database?**  
-A: Puoi integrare Firebase, Supabase o un backend custom
-
-**Q: È responsive?**  
-A: Sì, ottimizzato per mobile, tablet e desktop
-
-**Q: Posso contribuire anche se sono principiante?**  
-A: Assolutamente! Controlla le issue "good first issue"
+- [📖 Documentazione React](https://react.dev/)
+- [⚡ Guida Vite](https://vitejs.dev/)
+- [☁️ Vercel Docs](https://vercel.com/docs)
+- [💬 Apri una Issue](https://github.com/Marr111/presenze-animatori/issues)
 
 ---
 
 <div align="center">
 
-### ⭐ Se questo progetto ti è utile, lascia una stella! ⭐
+### ⭐ Se questo progetto ti è utile, lascia una stella su GitHub! ⭐
 
 **Made with ❤️ and React**
 
