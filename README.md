@@ -387,24 +387,12 @@ rm -rf .vite
 - [x] Registro animatori
 - [x] Dashboard statistiche
 - [x] Deploy su Vercel
-
-### 🔨 Versione 1.5 (Prossima)
-
-- [ ] Autenticazione utenti
-- [ ] Notifiche push
 - [ ] Esportazione Excel/PDF
-- [ ] Backup automatico dati
 - [ ] Tema scuro
-
-### 🚀 Versione 2.0 (Futuro)
-
-- [ ] Backend API (Node.js/Firebase)
+- [ ] Backup automatico dati
 - [ ] Database cloud
-- [ ] App mobile (React Native)
 - [ ] Sistema turni
-- [ ] Chat interna
 - [ ] Calendario eventi
-
 ---
 
 ## 🤝 Contribuire
