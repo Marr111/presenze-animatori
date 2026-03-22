@@ -4,7 +4,7 @@ import {
   Check, LogOut, Printer, ChevronRight, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
   PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays,
-  Trash2, Database, Skull, Settings, X
+  Trash2, Database, Skull, Settings, X, Github, MessageSquareWarning
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area, RadarChart, 
@@ -54,6 +54,7 @@ const App = () => {
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
   const [deleteMode, setDeleteMode] = useState(false);
   const [editingIdea, setEditingIdea] = useState(null); // { id, text }
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
@@ -77,13 +78,26 @@ const App = () => {
     // Polling: si aggiorna solo se non c'è un utente normale in sessione.
     // Quando un utente sta selezionando i turni, il refresh automatico
     // è sospeso per non sovrascrivere le sue scelte non ancora salvate.
-    // L'Admin può riceve aggiornamenti in tempo reale perché non modifica presenze.
+    // L'Admin può ricevere aggiornamenti in tempo reale perché non modifica presenze.
     if (currentUser && currentUser !== 'Admin') return;
     const interval = setInterval(() => {
-      loadData();
+      // Non sovrascrivere se c'è un utente attivo con modifiche non salvate
+      if (!hasUnsavedChanges) loadData();
     }, 10000);
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, [currentUser, hasUnsavedChanges]);
+
+  // Bug & Feature: Avviso di uscita se ci sono modifiche non salvate
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = ''; // Trigger standard browser prompt
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   useEffect(() => {
     if (darkMode) {
@@ -130,6 +144,7 @@ const App = () => {
 
   const handleFinalSave = async () => {
     await persistToCloud({ availabilities, ideas, people });
+    setHasUnsavedChanges(false);
     setCurrentUser(null);
     setSearchTerm("");
   };
@@ -229,6 +244,7 @@ const App = () => {
         }
       };
     });
+    setHasUnsavedChanges(true);
   };
 
   // Seleziona o deseleziona TUTTI i turni di un giorno in un click
@@ -241,6 +257,7 @@ const App = () => {
       TIME_SLOTS.forEach(s => { newDay[s] = !allSelected; });
       return { ...prev, [currentUser]: { ...userAvail, [date]: newDay } };
     });
+    setHasUnsavedChanges(true);
   };
 
   // --- EXPORT & CALENDAR ---
@@ -400,7 +417,7 @@ const App = () => {
         </div>
         <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-fuchsia-500 mb-10 tracking-tighter text-center">Triduo Tracker</h1>
         
-        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
           <div className={`${cardClasses} rounded-[2.5rem] p-6 flex flex-col h-[500px] md:h-[550px] border relative overflow-hidden`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-0"></div>
             <div className="flex items-center justify-between mb-6 z-10">
@@ -429,7 +446,13 @@ const App = () => {
                     : 'border-transparent'
                 }`}>
                   <button
-                    onClick={() => { if (!deleteMode) setCurrentUser(p); }}
+                    onClick={() => {
+                      if (!deleteMode) {
+                        setCurrentUser(p);
+                        // Reset alert unsaved if picking someone else
+                        if (currentUser !== p) setHasUnsavedChanges(false);
+                      }
+                    }}
                     disabled={deleteMode}
                     className={`flex-1 flex items-center gap-3 transition-all rounded-lg ${
                       !deleteMode && (darkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50')
@@ -437,7 +460,13 @@ const App = () => {
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg flex-shrink-0">{getInitials(p)}</div>
                     <span className={`font-bold text-lg ${
-                      deleteMode ? 'opacity-50' : hasFilledIn(p) ? 'text-emerald-500' : ''
+                      deleteMode 
+                        ? 'opacity-50' 
+                        : (hasUnsavedChanges && currentUser === p) 
+                          ? 'text-amber-500' // Giallo se ha modifiche non salvate in questa sessione
+                          : hasFilledIn(p) 
+                            ? 'text-emerald-500' // Verde se ha presenze nel DB
+                            : ''
                     }`}>{p}</span>
                   </button>
                   {deleteMode ? (
@@ -520,6 +549,16 @@ const App = () => {
             </div>
           </div>
         </div>
+
+        {/* Footer links */}
+        <div className="mt-12 flex flex-col md:flex-row items-center justify-center gap-4 relative z-10">
+          <a href="https://github.com/Marr111/presenze-animatori" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200'} shadow-lg`}>
+            <Github size={18} /> Repo GitHub
+          </a>
+          <a href="https://github.com/Marr111/presenze-animatori/issues" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200'} shadow-lg`}>
+            <MessageSquareWarning size={18} /> Segnala Problemi
+          </a>
+        </div>
       </div>
     );
   }
@@ -558,7 +597,11 @@ const App = () => {
           <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button onClick={() => setCurrentUser(null)} className="text-rose-500 flex items-center gap-2 font-bold text-sm uppercase hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2 rounded-xl transition-all">
+          <button onClick={() => {
+            if (hasUnsavedChanges && !confirm("Hai modifiche non salvate. Sicuro di voler uscire?")) return;
+            setCurrentUser(null);
+            setHasUnsavedChanges(false);
+          }} className="text-rose-500 flex items-center gap-2 font-bold text-sm uppercase hover:bg-rose-50 dark:hover:bg-rose-900/20 px-3 py-2 rounded-xl transition-all">
             <span className="hidden sm:inline opacity-70 mr-1">{currentUser}</span> 
             <LogOut size={20}/>
           </button>
