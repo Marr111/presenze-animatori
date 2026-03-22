@@ -53,6 +53,7 @@ const App = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
   const [deleteMode, setDeleteMode] = useState(false);
+  const [editingIdea, setEditingIdea] = useState(null); // { id, text }
 
   // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
@@ -201,6 +202,16 @@ const App = () => {
       setIdeas(updatedIdeas);
       await persistToCloud({ availabilities, ideas: updatedIdeas, people });
     }
+  };
+
+  const updateIdea = async () => {
+    if (!editingIdea || !editingIdea.text.trim()) return;
+    const updatedIdeas = ideas.map(idea =>
+      idea.id === editingIdea.id ? { ...idea, text: editingIdea.text.trim() } : idea
+    );
+    setIdeas(updatedIdeas);
+    setEditingIdea(null);
+    await persistToCloud({ availabilities, ideas: updatedIdeas, people });
   };
 
   const toggleAvailability = (date, slot) => {
@@ -436,14 +447,53 @@ const App = () => {
               <button onClick={addIdea} className="p-3 bg-indigo-600 text-white rounded-2xl hover:scale-105 transition-transform"><Send size={18} /></button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar z-10">
-              {ideas.map(idea => (
-                <div key={idea.id} className={`p-4 rounded-2xl shadow-sm border flex justify-between items-center group ${darkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-indigo-50 border-indigo-100'}`}>
-                  <p className="font-bold text-sm leading-tight italic opacity-90">"{idea.text}"</p>
-                  <button onClick={() => deleteIdea(idea.id)} className="ml-2 text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1" title="Cancella">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+              {ideas.map(idea => {
+                const isEditing = editingIdea?.id === idea.id;
+                return (
+                  <div key={idea.id} className={`p-3 rounded-2xl shadow-sm border group transition-all ${darkMode ? 'bg-slate-700/50 border-slate-600' : 'bg-indigo-50 border-indigo-100'}`}>
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingIdea.text}
+                          onChange={e => setEditingIdea({ ...editingIdea, text: e.target.value })}
+                          onKeyDown={e => { if (e.key === 'Enter') updateIdea(); if (e.key === 'Escape') setEditingIdea(null); }}
+                          className={`flex-1 px-3 py-1.5 rounded-xl border outline-none focus:ring-2 ring-amber-400 text-sm font-bold transition-all ${darkMode ? 'bg-slate-600 border-slate-500 text-white' : 'bg-white border-indigo-200'}`}
+                        />
+                        <button onClick={updateIdea} className="p-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors" title="Salva">
+                          <Check size={14} />
+                        </button>
+                        <button onClick={() => setEditingIdea(null)} className="p-1.5 rounded-lg bg-slate-500 text-white hover:bg-slate-600 transition-colors" title="Annulla">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center">
+                        <p
+                          className="font-bold text-sm leading-tight italic opacity-90 flex-1 cursor-pointer"
+                          onClick={() => setEditingIdea({ id: idea.id, text: idea.text })}
+                          title="Clicca per modificare"
+                        >
+                          "{idea.text}"
+                        </p>
+                        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setEditingIdea({ id: idea.id, text: idea.text })}
+                            className="text-slate-400 hover:text-amber-500 transition-colors p-1"
+                            title="Modifica"
+                          >
+                            <Sparkles size={14} />
+                          </button>
+                          <button onClick={() => deleteIdea(idea.id)} className="text-slate-400 hover:text-red-500 transition-colors p-1" title="Cancella">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
