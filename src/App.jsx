@@ -49,6 +49,7 @@ const App = () => {
   const [newIdea, setNewIdea] = useState("");
   const [testView, setTestView] = useState('summary');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
 
@@ -71,11 +72,13 @@ const App = () => {
 
   useEffect(() => {
     loadData();
+    // Bug #2 fix: ricaricare i dati ogni 10s indipendentemente dallo stato del login,
+    // così più utenti vedono in tempo reale le modifiche degli altri.
     const interval = setInterval(() => {
-      if (!currentUser) loadData(); 
+      loadData();
     }, 10000);
     return () => clearInterval(interval);
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     if (darkMode) {
@@ -103,13 +106,20 @@ const App = () => {
   // --- SALVATAGGIO ---
   const persistToCloud = async (updatedData) => {
     setIsSaving(true);
+    setSaveError(null);
     try {
-      await fetch('/api/save-data', {
+      const res = await fetch('/api/save-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: updatedData }),
       });
-    } catch (e) { console.error("Errore salvataggio", e); }
+      if (!res.ok) throw new Error(`Errore server: ${res.status}`);
+    } catch (e) {
+      console.error("Errore salvataggio", e);
+      // Bug #4 fix: mostra messaggio di errore visibile all'utente
+      setSaveError("Salvataggio fallito. Riprova.");
+      setTimeout(() => setSaveError(null), 5000);
+    }
     setIsSaving(false);
   };
 
@@ -153,12 +163,16 @@ const App = () => {
   // --- AZIONI UTENTE ---
   const addPerson = async () => {
     const name = prompt("Inserisci Nome e Cognome:");
-    if (name && !people.includes(name)) {
-      const newPeople = [...people, name].sort();
-      setPeople(newPeople);
-      await persistToCloud({ availabilities, ideas, people: newPeople });
-      setCurrentUser(name);
+    if (!name) return;
+    // Bug #13 fix: feedback se il nome esiste già
+    if (people.includes(name)) {
+      alert(`"${name}" è già presente nella lista. Cercalo e selezionalo.`);
+      return;
     }
+    const newPeople = [...people, name].sort();
+    setPeople(newPeople);
+    await persistToCloud({ availabilities, ideas, people: newPeople });
+    setCurrentUser(name);
   };
 
   const addIdea = async () => {
@@ -193,6 +207,23 @@ const App = () => {
   };
 
   // --- EXPORT & CALENDAR ---
+  // Bug #7 fix: il turno 'Notte' (00:00-08:00) appartiene al giorno SUCCESSIVO
+  const getICSDateStr = (dateLabel, slotName) => {
+    const dateStr = DATE_MAP[dateLabel];
+    const timeData = TIME_MAP[slotName];
+    if (!dateStr || !timeData) return null;
+    if (slotName === 'Notte') {
+      // Calcola il giorno successivo
+      const year = parseInt(dateStr.slice(0, 4));
+      const month = parseInt(dateStr.slice(4, 6)) - 1;
+      const day = parseInt(dateStr.slice(6, 8));
+      const next = new Date(year, month, day + 1);
+      const nextStr = `${next.getFullYear()}${String(next.getMonth()+1).padStart(2,'0')}${String(next.getDate()).padStart(2,'0')}`;
+      return { dtstart: `${nextStr}T${timeData.start}`, dtend: `${nextStr}T${timeData.end}` };
+    }
+    return { dtstart: `${dateStr}T${timeData.start}`, dtend: `${dateStr}T${timeData.end}` };
+  };
+
   const downloadICS = () => {
     let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TriduoTracker//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n`;
     const userSlots = availabilities[currentUser] || {};
@@ -202,11 +233,10 @@ const App = () => {
       if (!slots) return;
       Object.keys(slots).forEach(slotName => {
         if (slots[slotName]) {
-          const dateStr = DATE_MAP[dateLabel];
-          const timeData = TIME_MAP[slotName];
-          if (dateStr && timeData) {
+          const dates = getICSDateStr(dateLabel, slotName);
+          if (dates) {
             eventCount++;
-            icsContent += `BEGIN:VEVENT\nSUMMARY:Triduo 2026 - Turno ${slotName}\nDTSTART:${dateStr}T${timeData.start}\nDTEND:${dateStr}T${timeData.end}\nDESCRIPTION:Turno confermato per ${currentUser}.\nLOCATION:Casa Alpina\nSTATUS:CONFIRMED\nEND:VEVENT\n`;
+            icsContent += `BEGIN:VEVENT\nSUMMARY:Triduo 2026 - Turno ${slotName}\nDTSTART:${dates.dtstart}\nDTEND:${dates.dtend}\nDESCRIPTION:Turno confermato per ${currentUser}.\nLOCATION:Casa Alpina\nSTATUS:CONFIRMED\nEND:VEVENT\n`;
           }
         }
       });
@@ -222,22 +252,29 @@ const App = () => {
   };
 
   const exportToCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Nome," + ALL_PERIODS.map(p => `${p.date} ${p.slot}`).join(",") + ",Totale Debito\n";
+    // Bug #11 fix: usa Blob + URL.createObjectURL invece di encodeURI per supportare
+    // tutti i caratteri speciali (accenti, #, &, + ecc.)
+    let csvContent = "Nome," + ALL_PERIODS.map(p => `${p.date} ${p.slot}`).join(",") + ",Totale Debito\n";
     people.forEach(p => {
       let row = `${p},`;
       row += ALL_PERIODS.map(per => availabilities[p]?.[per.date]?.[per.slot] ? "X" : "").join(",");
       row += `,${calculateDebt(p)}€`;
       csvContent += row + "\n";
     });
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.href = encodedUri; link.download = "triduo_report.csv";
+    link.href = URL.createObjectURL(blob);
+    link.download = "triduo_report.csv";
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
   };
 
   // --- CALCOLI ---
-  const getInitials = (name) => name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
+  // Bug #8 fix: fallback '?' se il nome è composto solo da numeri
+  const getInitials = (name) => {
+    const initials = name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
+    return initials || '?';
+  };
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
     let meals = 0;
@@ -255,10 +292,11 @@ const App = () => {
     DATES.forEach(date => {
       ['Pranzo', 'Cena'].forEach(slot => {
         const presentPeople = people.filter(p => availabilities[p]?.[date]?.[slot]);
+        // Bug #6 fix: sort deterministico — tie-break per nome, non random
         const sortedCandidates = [...presentPeople].sort((a, b) => {
           const countDiff = washCounts[a] - washCounts[b];
           if (countDiff !== 0) return countDiff;
-          return 0.5 - Math.random();
+          return a.localeCompare(b);
         });
         const crew = sortedCandidates.slice(0, 3);
         crew.forEach(p => washCounts[p]++);
@@ -328,7 +366,9 @@ const App = () => {
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar z-10">
               {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-                <button key={p} onClick={() => { setCurrentUser(p); loadData(); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${darkMode ? 'hover:bg-indigo-500/20 border-transparent hover:border-indigo-500/50' : 'hover:bg-indigo-50 border-transparent hover:border-indigo-100'}`}>
+                // Bug #12 fix: rimossa la chiamata ridondante a loadData() — viene già
+                // gestita dal polling ogni 10s e al mount iniziale.
+                <button key={p} onClick={() => { setCurrentUser(p); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${darkMode ? 'hover:bg-indigo-500/20 border-transparent hover:border-indigo-500/50' : 'hover:bg-indigo-50 border-transparent hover:border-indigo-100'}`}>
                   <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg">{getInitials(p)}</div>
                   <span className="font-bold text-lg">{p}</span>
                   <ChevronRight className="ml-auto w-5 h-5 opacity-50" />
@@ -488,9 +528,11 @@ const App = () => {
                 </div>
               </div>
             ) : testView === 'charts' ? (
+              // Bug #10 fix: l'indice visibleChartsCount ora controlla la visibilità
+              // di ogni grafico, creando l'effetto waterfall/cascade
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* 1. Affluenza Timeline */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">1. Andamento Presenze</h3>
                   <div aria-hidden="true">
                     <AreaChart width={300} height={180} data={chartsData.timeline}>
@@ -500,7 +542,7 @@ const App = () => {
                 </div>
                 
                 {/* 2. Mix Pasti */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">2. Bilancio Pasti</h3>
                   <div aria-hidden="true">
                     <PieChart width={300} height={180}>
@@ -512,7 +554,7 @@ const App = () => {
                 </div>
                 
                 {/* 3. Impegni Staff */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">3. Classifica Impegni</h3>
                   <div aria-hidden="true">
                     <BarChart width={300} height={180} data={chartsData.staffActivity.slice(0, 6)}>
@@ -522,7 +564,7 @@ const App = () => {
                 </div>
                 
                 {/* 4. Radar Copertura */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">4. Analisi Fasce Orarie</h3>
                   <div aria-hidden="true">
                     <RadarChart cx={150} cy={90} outerRadius={60} width={300} height={180} data={chartsData.radar}>
@@ -532,7 +574,7 @@ const App = () => {
                 </div>
                 
                 {/* 5. Debiti (€) */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 5 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">5. Stato Pagamenti</h3>
                   <div aria-hidden="true">
                     <BarChart width={300} height={180} data={chartsData.debtData}>
@@ -542,7 +584,7 @@ const App = () => {
                 </div>
                 
                 {/* 6. Affluenza Giorno */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 6 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">6. Volume per Giorno</h3>
                   <div aria-hidden="true">
                     <BarChart width={300} height={180} data={chartsData.dailyTotal}>
@@ -552,7 +594,7 @@ const App = () => {
                 </div>
                 
                 {/* 7. Mix Categorie */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 7 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">7. Tipologia Attività</h3>
                   <div aria-hidden="true">
                     <PieChart width={300} height={180}>
@@ -564,7 +606,7 @@ const App = () => {
                 </div>
                 
                 {/* 8. Trend Fasce Principali */}
-                <div className="bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center">
+                <div className={`bg-white p-4 rounded-3xl border shadow-sm flex flex-col items-center transition-all duration-500 ${visibleChartsCount >= 8 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                   <h3 className="text-[10px] font-black mb-4 uppercase text-slate-400">8. Trend Giornaliero</h3>
                   <div aria-hidden="true">
                     <LineChart width={300} height={180} data={chartsData.lineData}>
@@ -682,6 +724,14 @@ const App = () => {
               ))}
             </div>
 
+            {/* Bug #4 fix: toast di errore visibile all'utente */}
+            {saveError && (
+              <div className="fixed top-20 left-0 right-0 flex justify-center z-50 pointer-events-none">
+                <div className="pointer-events-auto bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-2 text-sm animate-bounce">
+                  <AlertTriangle size={18} /> {saveError}
+                </div>
+              </div>
+            )}
             <div className="fixed bottom-6 left-0 right-0 p-4 flex justify-center z-50 no-print pointer-events-none">
               <button onClick={handleFinalSave} disabled={isSaving} className="pointer-events-auto w-full max-w-xs bg-slate-900 dark:bg-white dark:text-black text-white py-4 rounded-[2rem] font-black text-lg shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 border-4 border-white/20 dark:border-black/10 backdrop-blur-md">
                 {isSaving ? <Activity className="animate-spin" /> : <><Check size={24}/> SALVA TUTTO</>}
