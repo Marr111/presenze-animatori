@@ -73,14 +73,17 @@ const App = () => {
   };
 
   useEffect(() => {
-    loadData();
-    // Bug #2 fix: ricaricare i dati ogni 10s indipendentemente dallo stato del login,
-    // così più utenti vedono in tempo reale le modifiche degli altri.
+    loadData(); // carica sempre al cambio di utente
+    // Polling: si aggiorna solo se non c'è un utente normale in sessione.
+    // Quando un utente sta selezionando i turni, il refresh automatico
+    // è sospeso per non sovrascrivere le sue scelte non ancora salvate.
+    // L'Admin può riceve aggiornamenti in tempo reale perché non modifica presenze.
+    if (currentUser && currentUser !== 'Admin') return;
     const interval = setInterval(() => {
       loadData();
     }, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (darkMode) {
