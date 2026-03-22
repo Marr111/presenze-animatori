@@ -344,19 +344,14 @@ const App = () => {
       const data = await res.json();
       
       if (res.ok && data.success) {
-        alert("Issue creata con successo su GitHub!");
+        alert("Segnalazione inviata con successo!");
         setIsIssueModalOpen(false);
         setIssueTitle("");
         setIssueBody("");
       } else if (data.error === 'TOKEN_MISSING') {
-        // Fallback al form precompilato di GitHub
-        const url = `https://github.com/Marr111/presenze-animatori/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
-        window.open(url, '_blank');
-        setIsIssueModalOpen(false);
-        setIssueTitle("");
-        setIssueBody("");
+        alert("Errore Server: GITHUB_TOKEN non configurato. Per inviare reclami senza uscire dall'app, aggiungi il token nelle impostazioni del server.");
       } else {
-        alert("Errore durante la creazione: " + data.error);
+        alert("Errore durante l'invio: " + data.error);
       }
     } catch (e) {
       alert("Errore di rete: " + e.message);
