@@ -436,12 +436,9 @@ const App = () => {
                     }`}
                   >
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg flex-shrink-0">{getInitials(p)}</div>
-                    <span className={`font-bold text-lg ${deleteMode ? 'opacity-50' : ''}`}>{p}</span>
-                    {!deleteMode && hasFilledIn(p) && (
-                      <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-black uppercase tracking-wide flex items-center gap-1">
-                        <Check size={10} /> OK
-                      </span>
-                    )}
+                    <span className={`font-bold text-lg ${
+                      deleteMode ? 'opacity-50' : hasFilledIn(p) ? 'text-emerald-500' : ''
+                    }`}>{p}</span>
                   </button>
                   {deleteMode ? (
                     <button
