@@ -52,6 +52,7 @@ const App = () => {
   const [saveError, setSaveError] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [visibleChartsCount, setVisibleChartsCount] = useState(0);
+  const [deleteMode, setDeleteMode] = useState(false);
 
   // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
@@ -173,6 +174,16 @@ const App = () => {
     setPeople(newPeople);
     await persistToCloud({ availabilities, ideas, people: newPeople });
     setCurrentUser(name);
+  };
+
+  const deletePerson = async (name) => {
+    if (!confirm(`Sei sicuro di voler eliminare "${name}"?\nVerranno cancellate anche tutte le sue presenze.`)) return;
+    const newPeople = people.filter(p => p !== name);
+    const newAvail = { ...availabilities };
+    delete newAvail[name];
+    setPeople(newPeople);
+    setAvailabilities(newAvail);
+    await persistToCloud({ availabilities: newAvail, ideas, people: newPeople });
   };
 
   const addIdea = async () => {
@@ -360,19 +371,53 @@ const App = () => {
         <div className="max-w-5xl w-full grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className={`${cardClasses} rounded-[2.5rem] p-6 flex flex-col h-[500px] md:h-[550px] border relative overflow-hidden`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-0"></div>
-            <h2 className="text-2xl font-black mb-6 z-10">Chi sei?</h2>
+            <div className="flex items-center justify-between mb-6 z-10">
+              <h2 className="text-2xl font-black">Chi sei?</h2>
+              <button
+                onClick={() => setDeleteMode(d => !d)}
+                title={deleteMode ? 'Annulla eliminazione' : 'Elimina un nome'}
+                className={`p-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 ${
+                  deleteMode
+                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
+                    : `${darkMode ? 'bg-slate-700 text-slate-400 hover:bg-red-500/20 hover:text-red-400' : 'bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500'}`
+                }`}
+              >
+                <Trash2 size={14} />
+                {deleteMode ? 'Annulla' : 'Elimina'}
+              </button>
+            </div>
             <div className="relative z-10">
                <input type="text" placeholder="Cerca il tuo nome..." className={`w-full px-4 py-3 rounded-2xl mb-4 border outline-none focus:ring-2 ring-indigo-400 transition-all ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200'}`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar z-10">
               {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
-                // Bug #12 fix: rimossa la chiamata ridondante a loadData() — viene già
-                // gestita dal polling ogni 10s e al mount iniziale.
-                <button key={p} onClick={() => { setCurrentUser(p); }} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${darkMode ? 'hover:bg-indigo-500/20 border-transparent hover:border-indigo-500/50' : 'hover:bg-indigo-50 border-transparent hover:border-indigo-100'}`}>
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg">{getInitials(p)}</div>
-                  <span className="font-bold text-lg">{p}</span>
-                  <ChevronRight className="ml-auto w-5 h-5 opacity-50" />
-                </button>
+                <div key={p} className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border ${
+                  deleteMode
+                    ? `${darkMode ? 'border-red-900/40 bg-red-500/5' : 'border-red-100 bg-red-50/50'}`
+                    : 'border-transparent'
+                }`}>
+                  <button
+                    onClick={() => { if (!deleteMode) setCurrentUser(p); }}
+                    disabled={deleteMode}
+                    className={`flex-1 flex items-center gap-3 transition-all rounded-lg ${
+                      !deleteMode && (darkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50')
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg">{getInitials(p)}</div>
+                    <span className={`font-bold text-lg ${deleteMode ? 'opacity-50' : ''}`}>{p}</span>
+                  </button>
+                  {deleteMode ? (
+                    <button
+                      onClick={() => deletePerson(p)}
+                      className="ml-auto p-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors shadow-md"
+                      title={`Elimina ${p}`}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  ) : (
+                    <ChevronRight className="ml-auto w-5 h-5 opacity-50 pointer-events-none" />
+                  )}
+                </div>
               ))}
               <div className="pt-4 pb-2">
                 <button onClick={addPerson} className={`w-full p-4 border-2 border-dashed rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm uppercase ${darkMode ? 'border-slate-600 text-slate-400 hover:bg-slate-700' : 'border-indigo-200 text-indigo-500 hover:bg-indigo-50'}`}>
