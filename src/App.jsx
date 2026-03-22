@@ -231,6 +231,18 @@ const App = () => {
     });
   };
 
+  // Seleziona o deseleziona TUTTI i turni di un giorno in un click
+  const toggleAllDay = (date) => {
+    setAvailabilities(prev => {
+      const userAvail = prev[currentUser] || {};
+      const dayAvail = userAvail[date] || {};
+      const allSelected = TIME_SLOTS.every(s => dayAvail[s] === true);
+      const newDay = {};
+      TIME_SLOTS.forEach(s => { newDay[s] = !allSelected; });
+      return { ...prev, [currentUser]: { ...userAvail, [date]: newDay } };
+    });
+  };
+
   // --- EXPORT & CALENDAR ---
   // Bug #7 fix: il turno 'Notte' (00:00-08:00) appartiene al giorno SUCCESSIVO
   const getICSDateStr = (dateLabel, slotName) => {
@@ -299,6 +311,12 @@ const App = () => {
   const getInitials = (name) => {
     const initials = name.split(' ').filter(w => isNaN(w)).map(n => n[0]).join('').toUpperCase();
     return initials || '?';
+  };
+  // Restituisce true se la persona ha almeno una presenza già salvata
+  const hasFilledIn = (person) => {
+    const userAvail = availabilities[person];
+    if (!userAvail) return false;
+    return DATES.some(d => TIME_SLOTS.some(s => userAvail[d]?.[s] === true));
   };
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -417,8 +435,13 @@ const App = () => {
                       !deleteMode && (darkMode ? 'hover:bg-indigo-500/10' : 'hover:bg-indigo-50')
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg">{getInitials(p)}</div>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-xs shadow-lg flex-shrink-0">{getInitials(p)}</div>
                     <span className={`font-bold text-lg ${deleteMode ? 'opacity-50' : ''}`}>{p}</span>
+                    {!deleteMode && hasFilledIn(p) && (
+                      <span className="ml-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 text-[10px] font-black uppercase tracking-wide flex items-center gap-1">
+                        <Check size={10} /> OK
+                      </span>
+                    )}
                   </button>
                   {deleteMode ? (
                     <button
@@ -799,26 +822,44 @@ const App = () => {
              </div>
 
             <div className="space-y-4">
-              {DATES.map(d => (
-                <div key={d} className={`${cardClasses} p-5 rounded-[2rem] border`}>
-                  <div className="font-black mb-4 text-center border-b pb-3 border-slate-100 dark:border-slate-700 text-indigo-500 uppercase tracking-widest text-sm">{d}</div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {TIME_SLOTS.map(s => {
-                      const active = availabilities[currentUser]?.[d]?.[s];
-                      const isMeal = ['Pranzo', 'Cena'].includes(s);
-                      return (
-                        <button key={s} onClick={() => toggleAvailability(d, s)} className={`relative py-4 rounded-xl font-black uppercase transition-all flex flex-col items-center justify-center border-2 ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/30' : `bg-transparent ${darkMode ? 'border-slate-700 text-slate-400 hover:border-slate-600' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}`}>
-                          <div className="flex items-center gap-1 mb-1">
-                             {isMeal ? <Utensils size={14}/> : <Clock size={14}/>}
-                          </div>
-                          <span className="text-[10px] tracking-wide">{s}</span>
-                          {isMeal && !active && <span className="absolute top-1 right-1 text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">+5€</span>}
-                        </button>
-                      );
-                    })}
+              {DATES.map(d => {
+                const allSelected = TIME_SLOTS.every(s => availabilities[currentUser]?.[d]?.[s] === true);
+                const anySelected = TIME_SLOTS.some(s => availabilities[currentUser]?.[d]?.[s] === true);
+                return (
+                  <div key={d} className={`${cardClasses} p-5 rounded-[2rem] border`}>
+                    <div className="flex items-center justify-between mb-4 border-b pb-3 border-slate-100 dark:border-slate-700">
+                      <span className="font-black text-indigo-500 uppercase tracking-widest text-sm">{d}</span>
+                      <button
+                        onClick={() => toggleAllDay(d)}
+                        className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                          allSelected
+                            ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/30'
+                            : darkMode ? 'bg-slate-700 text-slate-400 hover:bg-indigo-500/20 hover:text-indigo-400' : 'bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-500'
+                        }`}
+                        title={allSelected ? 'Deseleziona tutto' : 'Seleziona tutto'}
+                      >
+                        {allSelected ? <X size={11}/> : <Check size={11}/>}
+                        {allSelected ? 'Niente' : 'Tutto'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {TIME_SLOTS.map(s => {
+                        const active = availabilities[currentUser]?.[d]?.[s];
+                        const isMeal = ['Pranzo', 'Cena'].includes(s);
+                        return (
+                          <button key={s} onClick={() => toggleAvailability(d, s)} className={`relative py-4 rounded-xl font-black uppercase transition-all flex flex-col items-center justify-center border-2 ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/30' : `bg-transparent ${darkMode ? 'border-slate-700 text-slate-400 hover:border-slate-600' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}`}>
+                            <div className="flex items-center gap-1 mb-1">
+                               {isMeal ? <Utensils size={14}/> : <Clock size={14}/>}
+                            </div>
+                            <span className="text-[10px] tracking-wide">{s}</span>
+                            {isMeal && !active && <span className="absolute top-1 right-1 text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">+5€</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Bug #4 fix: toast di errore visibile all'utente */}
