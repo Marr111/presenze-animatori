@@ -1,7 +1,7 @@
 import './App.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Check, LogOut, Printer, ChevronRight, CheckCircle2, UserPlus,
+  Check, LogOut, Printer, ChevronRight, UserPlus,
   Lightbulb, Send, Utensils, AlertTriangle, Clock, Activity, 
   PieChart as PieIcon, Moon, Sun, Bell, Download, Calendar, Sparkles, CalendarDays,
   Trash2, Database, Skull, Settings, X
@@ -807,7 +807,6 @@ const App = () => {
                         <button key={s} onClick={() => toggleAvailability(d, s)} className={`relative py-4 rounded-xl font-black uppercase transition-all flex flex-col items-center justify-center border-2 ${active ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/30' : `bg-transparent ${darkMode ? 'border-slate-700 text-slate-400 hover:border-slate-600' : 'border-slate-100 text-slate-400 hover:border-slate-200'}`}`}>
                           <div className="flex items-center gap-1 mb-1">
                              {isMeal ? <Utensils size={14}/> : <Clock size={14}/>}
-                             {active && <CheckCircle2 size={14}/>}
                           </div>
                           <span className="text-[10px] tracking-wide">{s}</span>
                           {isMeal && !active && <span className="absolute top-1 right-1 text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">+5€</span>}
