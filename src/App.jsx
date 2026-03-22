@@ -56,6 +56,12 @@ const App = () => {
   const [editingIdea, setEditingIdea] = useState(null); // { id, text }
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Issue states
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [issueTitle, setIssueTitle] = useState("");
+  const [issueBody, setIssueBody] = useState("");
+  const [isSubmittingIssue, setIsSubmittingIssue] = useState(false);
+
   // --- SINCRONIZZAZIONE DATI ---
   const loadData = async () => {
     try {
@@ -323,6 +329,41 @@ const App = () => {
     URL.revokeObjectURL(link.href);
   };
 
+  // --- GITHUB ISSUES ---
+  const handleSubmitIssue = async () => {
+    if (!issueTitle.trim() || !issueBody.trim()) return;
+    setIsSubmittingIssue(true);
+    
+    try {
+      const res = await fetch('/api/create-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: issueTitle, body: issueBody })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        alert("Issue creata con successo su GitHub!");
+        setIsIssueModalOpen(false);
+        setIssueTitle("");
+        setIssueBody("");
+      } else if (data.error === 'TOKEN_MISSING') {
+        // Fallback al form precompilato di GitHub
+        const url = `https://github.com/Marr111/presenze-animatori/issues/new?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`;
+        window.open(url, '_blank');
+        setIsIssueModalOpen(false);
+        setIssueTitle("");
+        setIssueBody("");
+      } else {
+        alert("Errore durante la creazione: " + data.error);
+      }
+    } catch (e) {
+      alert("Errore di rete: " + e.message);
+    }
+    setIsSubmittingIssue(false);
+  };
+
   // --- CALCOLI ---
   // Bug #8 fix: fallback '?' se il nome è composto solo da numeri
   const getInitials = (name) => {
@@ -555,10 +596,56 @@ const App = () => {
           <a href="https://github.com/Marr111/presenze-animatori" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200'} shadow-lg`}>
             <Github size={18} /> Repo GitHub
           </a>
-          <a href="https://github.com/Marr111/presenze-animatori/issues" target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200'} shadow-lg`}>
+          <button onClick={() => setIsIssueModalOpen(true)} className={`flex items-center gap-2 px-5 py-3 rounded-full font-bold text-sm transition-all ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white' : 'bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-slate-200'} shadow-lg`}>
             <MessageSquareWarning size={18} /> Segnala Problemi
-          </a>
+          </button>
         </div>
+
+        {/* ISSUE MODAL */}
+        {isIssueModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+            <div className={`max-w-md w-full p-6 rounded-[2rem] shadow-2xl relative ${darkMode ? 'bg-slate-800 text-white' : 'bg-white text-slate-900 border border-slate-200'}`}>
+              <button onClick={() => setIsIssueModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                <X size={20} />
+              </button>
+              <h2 className="text-2xl font-black mb-2 flex items-center gap-2">
+                <MessageSquareWarning className="text-amber-500" /> Segnala Problema
+              </h2>
+              <p className="text-sm opacity-70 mb-6">Descrivi il problema o il suggerimento. Verrà trasformato automaticamente in una issue su GitHub.</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Titolo (<span className="text-red-500">*</span>)</label>
+                  <input
+                    type="text"
+                    value={issueTitle}
+                    onChange={(e) => setIssueTitle(e.target.value)}
+                    placeholder="Es: Il grafico dei pasti si sovrappone"
+                    className={`w-full px-4 py-3 rounded-2xl border outline-none focus:ring-2 ring-indigo-400 transition-all ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200'}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Descrizione/Dettagli (<span className="text-red-500">*</span>)</label>
+                  <textarea
+                    value={issueBody}
+                    onChange={(e) => setIssueBody(e.target.value)}
+                    rows={4}
+                    placeholder="Es: Sul mio telefono quando apro la schermata piatti..."
+                    className={`w-full px-4 py-3 rounded-2xl border outline-none focus:ring-2 ring-indigo-400 transition-all resize-none custom-scrollbar ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'bg-slate-50 border-slate-200'}`}
+                  ></textarea>
+                </div>
+                <button
+                  onClick={handleSubmitIssue}
+                  disabled={isSubmittingIssue || !issueTitle.trim() || !issueBody.trim()}
+                  className="w-full mt-4 bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase text-sm hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmittingIssue ? <Activity className="animate-spin" size={18} /> : <Send size={18} />}
+                  Invia Segnalazione
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
