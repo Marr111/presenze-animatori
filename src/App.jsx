@@ -86,6 +86,9 @@ const App = () => {
 
   useEffect(() => {
     loadData(); // carica sempre al cambio di utente
+  }, [currentUser]);
+
+  useEffect(() => {
     // Polling: si aggiorna solo se non c'è un utente normale in sessione.
     // Quando un utente sta selezionando i turni, il refresh automatico
     // è sospeso per non sovrascrivere le sue scelte non ancora salvate.
