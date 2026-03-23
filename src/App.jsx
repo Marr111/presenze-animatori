@@ -14,6 +14,11 @@ import {
 // --- CONFIGURAZIONE COSTANTI ---
 const DATES = ['Gio 2 Apr', 'Ven 3 Apr', 'Sab 4 Apr'];
 const TIME_SLOTS = ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'];
+const DAY_SLOTS = {
+  'Gio 2 Apr': ['Cena', 'Sera', 'Notte'],
+  'Ven 3 Apr': ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena', 'Sera', 'Notte'],
+  'Sab 4 Apr': ['Mattino', 'Pranzo', 'Pomeriggio', 'Cena']
+};
 const MEAL_PRICE = 5;
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#4f46e5'];
 
@@ -38,7 +43,7 @@ const INITIAL_PEOPLE = [
   'Gloria Romano', 'Vittoria Pelassa'
 ].sort();
 
-const ALL_PERIODS = DATES.flatMap(d => TIME_SLOTS.map(s => ({ date: d, slot: s })));
+const ALL_PERIODS = DATES.flatMap(d => DAY_SLOTS[d].map(s => ({ date: d, slot: s })));
 
 const App = () => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -173,7 +178,7 @@ const App = () => {
         newAvail[person] = {};
         DATES.forEach(d => {
           newAvail[person][d] = {};
-          TIME_SLOTS.forEach(s => {
+          DAY_SLOTS[d].forEach(s => {
             if (Math.random() > 0.7) {
               newAvail[person][d][s] = true;
             }
@@ -258,9 +263,9 @@ const App = () => {
     setAvailabilities(prev => {
       const userAvail = prev[currentUser] || {};
       const dayAvail = userAvail[date] || {};
-      const allSelected = TIME_SLOTS.every(s => dayAvail[s] === true);
+      const allSelected = DAY_SLOTS[date].every(s => dayAvail[s] === true);
       const newDay = {};
-      TIME_SLOTS.forEach(s => { newDay[s] = !allSelected; });
+      DAY_SLOTS[date].forEach(s => { newDay[s] = !allSelected; });
       return { ...prev, [currentUser]: { ...userAvail, [date]: newDay } };
     });
     setHasUnsavedChanges(true);
@@ -369,7 +374,7 @@ const App = () => {
   const hasFilledIn = (person) => {
     const userAvail = availabilities[person];
     if (!userAvail) return false;
-    return DATES.some(d => TIME_SLOTS.some(s => userAvail[d]?.[s] === true));
+    return DATES.some(d => DAY_SLOTS[d].some(s => userAvail[d]?.[s] === true));
   };
   const countTotal = (date, slot) => people.filter(p => availabilities[p]?.[date]?.[slot] === true).length;
   const calculateDebt = (person) => {
@@ -387,6 +392,7 @@ const App = () => {
     people.forEach(p => washCounts[p] = 0);
     DATES.forEach(date => {
       ['Pranzo', 'Cena'].forEach(slot => {
+        if (!DAY_SLOTS[date].includes(slot)) return;
         const presentPeople = people.filter(p => availabilities[p]?.[date]?.[slot]);
         // Bug #6 fix: sort deterministico — tie-break per nome, non random
         const sortedCandidates = [...presentPeople].sort((a, b) => {
@@ -410,12 +416,12 @@ const App = () => {
     ];
     const staffActivity = people.map(p => {
       let count = 0;
-      DATES.forEach(d => TIME_SLOTS.forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
+      DATES.forEach(d => DAY_SLOTS[d].forEach(s => { if (availabilities[p]?.[d]?.[s]) count++; }));
       return { name: p.split(' ')[0], impegni: count };
     });
     const radar = TIME_SLOTS.map(s => ({ subject: s, A: DATES.reduce((acc, d) => acc + countTotal(d, s), 0) }));
     const debtData = people.map(p => ({ name: p.split(' ')[0], euro: calculateDebt(p) })).filter(d => d.euro > 0);
-    const dailyTotal = DATES.map(d => ({ name: d, totale: TIME_SLOTS.reduce((acc, s) => acc + countTotal(d, s), 0) }));
+    const dailyTotal = DATES.map(d => ({ name: d, totale: DAY_SLOTS[d].reduce((acc, s) => acc + countTotal(d, s), 0) }));
     const categoryMix = [
       { name: 'Fasce Pasti', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Pranzo') + countTotal(d, 'Cena'), 0) },
       { name: 'Altre Fasce', value: DATES.reduce((acc, d) => acc + countTotal(d, 'Mattino') + countTotal(d, 'Pomeriggio') + countTotal(d, 'Sera') + countTotal(d, 'Notte'), 0) }
@@ -890,7 +896,7 @@ const App = () => {
                 {DATES.map(d => (
                   <div key={d} className={`${cardClasses} rounded-3xl p-6 border`}>
                     <h3 className="text-xl font-black mb-6 uppercase border-b pb-2 border-indigo-100 text-indigo-500">{d}</h3>
-                    {['Pranzo', 'Cena'].map(m => (
+                    {['Pranzo', 'Cena'].filter(m => DAY_SLOTS[d].includes(m)).map(m => (
                       <div key={m} className={`flex justify-between items-center p-5 rounded-[1.5rem] mb-3 shadow-inner ${darkMode ? 'bg-slate-900' : 'bg-slate-50 border border-slate-100'}`}>
                         <span className="font-black opacity-50 uppercase text-xs">{m}</span>
                         <span className="text-4xl font-black">{countTotal(d, m)}</span>
@@ -905,7 +911,7 @@ const App = () => {
                 {DATES.map(d => (
                   <div key={d} className={`${cardClasses} rounded-3xl p-6 border text-center`}>
                     <h3 className="font-black text-indigo-500 border-b pb-2 mb-4 uppercase text-center tracking-tighter border-indigo-100/20">{d}</h3>
-                    {TIME_SLOTS.map(s => (
+                    {DAY_SLOTS[d].map(s => (
                       <div key={s} className={`flex justify-between py-2 border-b last:border-0 ${darkMode ? 'border-slate-700' : 'border-slate-50'}`}>
                         <span className="font-bold opacity-60 text-[10px] uppercase tracking-wide">{s}</span>
                         <span className="font-black">{countTotal(d, s)}</span>
@@ -945,8 +951,8 @@ const App = () => {
 
             <div className="space-y-4">
               {DATES.map(d => {
-                const allSelected = TIME_SLOTS.every(s => availabilities[currentUser]?.[d]?.[s] === true);
-                const anySelected = TIME_SLOTS.some(s => availabilities[currentUser]?.[d]?.[s] === true);
+                const allSelected = DAY_SLOTS[d].every(s => availabilities[currentUser]?.[d]?.[s] === true);
+                const anySelected = DAY_SLOTS[d].some(s => availabilities[currentUser]?.[d]?.[s] === true);
                 return (
                   <div key={d} className={`${cardClasses} p-5 rounded-[2rem] border`}>
                     <div className="flex items-center justify-between mb-4 border-b pb-3 border-slate-100 dark:border-slate-700">
@@ -965,7 +971,7 @@ const App = () => {
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {TIME_SLOTS.map(s => {
+                      {DAY_SLOTS[d].map(s => {
                         const active = availabilities[currentUser]?.[d]?.[s];
                         const isMeal = ['Pranzo', 'Cena'].includes(s);
                         return (
