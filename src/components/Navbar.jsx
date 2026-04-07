@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sun, Moon, LogOut } from 'lucide-react';
+import MangerIcon from './MangerIcon';
 
 const Navbar = ({ currentUser, darkMode, setDarkMode, onLogout }) => {
   return (
@@ -7,7 +8,7 @@ const Navbar = ({ currentUser, darkMode, setDarkMode, onLogout }) => {
       darkMode ? 'bg-[#0a1a0e]/90 border-[#1e3a2a]' : 'bg-[#fef5e8]/90 border-[#e0c9a8]'
     }`}>
       <div className="flex items-center gap-3">
-        <span className="text-2xl">🎄</span>
+        <MangerIcon size={28} className="drop-shadow-sm" />
         <div className="font-black text-transparent bg-clip-text bg-gradient-to-r from-[#c41e3a] to-[#2d7a4e] text-xl tracking-tighter">
           TRACKER 2026
         </div>

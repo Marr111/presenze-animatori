@@ -3,6 +3,7 @@ import { Check, Activity, AlertTriangle, Utensils, Clock, CalendarDays } from 'l
 import Navbar from '../components/Navbar';
 import IdeaBoard from '../components/IdeaBoard';
 import ProgramSection from '../components/ProgramSection';
+import MangerIcon from '../components/MangerIcon';
 import { DATES, DAY_SLOTS } from '../utils/constants';
 import { calculateDebt, downloadICS } from '../utils/helpers';
 
@@ -105,7 +106,7 @@ const UserDashboard = ({
           </div>
           <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-[#e8c84b]/20 rounded-full blur-2xl" />
-          <div className="absolute top-2 right-2 text-4xl opacity-20">🎄</div>
+          <MangerIcon size={48} className="absolute top-2 right-2 opacity-30 drop-shadow-md" />
         </div>
 
         {/* Tabs */}

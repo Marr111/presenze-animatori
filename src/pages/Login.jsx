@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight, UserPlus, Trash2, Sun, Moon, Github, MessageSquareWarning } from 'lucide-react';
 import { getInitials, hasFilledIn } from '../utils/helpers';
 import IssueModal from '../components/IssueModal';
+import MangerIcon from '../components/MangerIcon';
 
 const Login = ({ appData, darkMode, setDarkMode, onLogin, updateAndSave }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,8 +62,8 @@ const Login = ({ appData, darkMode, setDarkMode, onLogin, updateAndSave }) => {
       </div>
 
       {/* Logo */}
-      <div className="text-center mb-8 relative z-10">
-        <div className="text-6xl mb-3 drop-shadow-lg">🎄</div>
+      <div className="text-center mb-8 relative z-10 flex flex-col items-center">
+        <MangerIcon size={80} className="mb-4 drop-shadow-[0_0_15px_rgba(232,200,75,0.4)]" />
         <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#c41e3a] via-[#e8c84b] to-[#2d7a4e] tracking-tighter">
           Triduo Tracker
         </h1>
