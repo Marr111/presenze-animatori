@@ -24,5 +24,5 @@ export const INITIAL_PEOPLE = [
   'Matteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Beatrice Aloi',
   'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
   'Gloria Romano', 'Vittoria Pelassa'
-].sort();
+].sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
 export const ALL_PERIODS = DATES.flatMap(d => DAY_SLOTS[d].map(s => ({ date: d, slot: s })));

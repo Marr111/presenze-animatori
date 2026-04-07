@@ -17,7 +17,7 @@ const Login = ({ appData, darkMode, setDarkMode, onLogin, updateAndSave }) => {
       alert(`"${name}" è già presente nella lista.`);
       return;
     }
-    const newPeople = [...people, name.trim()].sort();
+    const newPeople = [...people, name.trim()].sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
     await updateAndSave({ people: newPeople }, `${name.trim()} si è registrato`);
     onLogin(name.trim());
   };
@@ -100,7 +100,7 @@ const Login = ({ appData, darkMode, setDarkMode, onLogin, updateAndSave }) => {
 
         {/* People list */}
         <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-          {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+          {people.filter(p => p.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' })).map(p => (
             <div key={p} className={`flex items-center gap-3 p-2 rounded-xl transition-all ${
               deleteMode ? (dm ? 'bg-red-500/5 border border-red-900/30' : 'bg-red-50 border border-red-100') : 'border border-transparent'
             }`}>
