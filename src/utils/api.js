@@ -4,13 +4,15 @@ export const loadData = async () => {
   return response.json();
 };
 
-export const saveData = async (data) => {
+export const saveData = async (data, actionObj) => {
+  const bodyPayload = actionObj ? { actionObj } : { data };
   const res = await fetch('/api/save-data', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
+    body: JSON.stringify(bodyPayload),
   });
   if (!res.ok) throw new Error(`Errore server: ${res.status}`);
+  return await res.json();
 };
 
 export const addLog = async (user, action) => {

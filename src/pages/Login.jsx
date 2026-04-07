@@ -27,7 +27,14 @@ const Login = ({ appData, darkMode, setDarkMode, onLogin, updateAndSave }) => {
     const newPeople = people.filter(p => p !== name);
     const newAvail = { ...availabilities };
     delete newAvail[name];
-    await updateAndSave({ people: newPeople, availabilities: newAvail }, `Admin ha eliminato l'utente ${name}`);
+
+    // Rimuovi l'utente dai dishAssignments (piatti)
+    const newDishes = { ...(appData.dishAssignments || {}) };
+    Object.keys(newDishes).forEach(key => {
+      newDishes[key] = newDishes[key].filter(p => p !== name);
+    });
+
+    await updateAndSave({ people: newPeople, availabilities: newAvail, dishAssignments: newDishes }, `Admin ha eliminato l'utente ${name}`);
   };
 
   const dm = darkMode;

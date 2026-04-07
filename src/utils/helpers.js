@@ -124,5 +124,9 @@ export const formatFirstName = (fullName, allPeople) => {
     charsToTake++;
   }
 
-  return `${first} ${myRest.substring(0, charsToTake)}.`;
+  const resultRest = myRest.substring(0, charsToTake);
+  if (charsToTake >= myRest.length) {
+    return `${first} ${resultRest}`;
+  }
+  return `${first} ${resultRest}.`;
 };

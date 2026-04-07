@@ -63,11 +63,20 @@ const App = () => {
   }, [darkMode]);
 
   // --- Cloud persistence ---
-  const persistToCloud = useCallback(async (data) => {
+  const persistToCloud = useCallback(async (data, actionObj) => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      await saveData(data);
+      const response = await saveData(data, actionObj);
+      if (response && response.success && response.data) {
+         setAppData(prev => ({
+           availabilities:  response.data.availabilities  || {},
+           ideas:           response.data.ideas           || [],
+           people:          response.data.people?.length > 0 ? response.data.people : prev.people,
+           schedule:        response.data.schedule        || [],
+           dishAssignments: response.data.dishAssignments || {},
+         }));
+      }
     } catch {
       setSaveError('Salvataggio fallito. Riprova.');
       setTimeout(() => setSaveError(null), 5000);
@@ -76,14 +85,26 @@ const App = () => {
   }, []);
 
   // Merge partial update into state and save
-  const updateAndSave = useCallback(async (partialData, logAction) => {
-    const merged = { ...appData, ...partialData };
-    setAppData(merged);
-    await persistToCloud(merged);
+  const updateAndSave = useCallback(async (partialData, logAction, actionObj) => {
+    if (actionObj) {
+      // Per le azioni parziali con delta backend-side
+      setAppData(prev => ({ ...prev, ...partialData })); // Aggiornamento UI ottimistico
+      await persistToCloud(null, actionObj);
+    } else {
+      // Full save state - usato solitamente dall'admin
+      const merged = { ...appData, ...partialData };
+      setAppData(merged);
+      await persistToCloud(merged);
+    }
     if (logAction && currentUser) {
       await addLog(currentUser, logAction);
     }
   }, [appData, persistToCloud, currentUser]);
+
+  const updateLocal = useCallback((partialData) => {
+    setAppData(prev => ({ ...prev, ...partialData }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   // --- Navigation ---
   const handleLogin = (name) => {
@@ -132,6 +153,7 @@ const App = () => {
       setDarkMode={setDarkMode}
       onLogout={handleLogout}
       updateAndSave={updateAndSave}
+      updateLocal={updateLocal}
       persistToCloud={persistToCloud}
       isSaving={isSaving}
       saveError={saveError}

@@ -14,7 +14,7 @@ const TABS = [
 
 const UserDashboard = ({
   currentUser, appData, darkMode, setDarkMode,
-  onLogout, updateAndSave, isSaving, saveError,
+  onLogout, updateAndSave, updateLocal, isSaving, saveError,
   hasUnsavedChanges, setHasUnsavedChanges, persistToCloud,
 }) => {
   const [activeTab, setActiveTab] = useState('turni');
@@ -36,8 +36,7 @@ const UserDashboard = ({
         [date]: { ...dayAvail, [slot]: !dayAvail[slot] },
       },
     };
-    updateAndSave({ availabilities: newAvail }, null); // don't log on every click
-    setHasUnsavedChanges(true);
+    updateLocal({ availabilities: newAvail });
   };
 
   const toggleAllDay = (date) => {
@@ -47,14 +46,16 @@ const UserDashboard = ({
     const newDay = {};
     DAY_SLOTS[date].forEach(s => { newDay[s] = !allSelected; });
     const newAvail = { ...availabilities, [currentUser]: { ...userAvail, [date]: newDay } };
-    updateAndSave({ availabilities: newAvail }, null);
-    setHasUnsavedChanges(true);
+    updateLocal({ availabilities: newAvail });
   };
 
   const handleFinalSave = async () => {
     const userSlots = availabilities[currentUser] || {};
     const count = Object.values(userSlots).flatMap(d => Object.values(d)).filter(Boolean).length;
-    await persistToCloud(appData);
+    
+    // Pass user updates to be merged properly backend side without race conditions
+    await persistToCloud(null, { type: 'UPDATE_USER_AVAIL', payload: { user: currentUser, avail: userSlots } });
+    
     if (count > 0) {
       const { addLog } = await import('../utils/api');
       await addLog(currentUser, `ha confermato la sua presenza (${count} turni selezionati)`);
@@ -65,22 +66,21 @@ const UserDashboard = ({
 
   // --- Ideas handlers ---
   const handleAddIdea = async (text) => {
-    const newIdeas = [...ideas, { id: Date.now(), text }];
-    const { addLog } = await import('../utils/api');
-    await updateAndSave({ ideas: newIdeas }, `ha aggiunto l'idea: "${text}"`);
+    const newIdea = { id: Date.now(), text };
+    const newIdeas = [...ideas, newIdea];
+    await updateAndSave({ ideas: newIdeas }, `ha aggiunto l'idea: "${text}"`, { type: 'ADD_IDEA', payload: { idea: newIdea } });
   };
 
   const handleDeleteIdea = async (id) => {
     if (!confirm('Vuoi davvero cancellare questa idea?')) return;
     const idea = ideas.find(i => i.id === id);
     const newIdeas = ideas.filter(i => i.id !== id);
-    const { addLog } = await import('../utils/api');
-    await updateAndSave({ ideas: newIdeas }, `ha eliminato l'idea: "${idea?.text}"`);
+    await updateAndSave({ ideas: newIdeas }, `ha eliminato l'idea: "${idea?.text}"`, { type: 'DELETE_IDEA', payload: { id } });
   };
 
   const handleUpdateIdea = async (editedIdea) => {
     const newIdeas = ideas.map(i => i.id === editedIdea.id ? { ...i, text: editedIdea.text } : i);
-    await updateAndSave({ ideas: newIdeas }, `ha modificato un'idea`);
+    await updateAndSave({ ideas: newIdeas }, `ha modificato un'idea`, { type: 'UPDATE_IDEA', payload: { idea: editedIdea } });
   };
 
   return (
