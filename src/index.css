@@ -2,15 +2,120 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply antialiased bg-slate-50;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  }
+/* ─── Christmas Theme Variables ─────────────────────────────────── */
+:root {
+  --xmas-red:        #c41e3a;
+  --xmas-red-dark:   #a01830;
+  --xmas-green:      #2d7a4e;
+  --xmas-green-dark: #1a5c38;
+  --xmas-gold:       #e8c84b;
+  --xmas-cream:      #fef5e8;
+  --xmas-dark-bg:    #0a1a0e;
+  --xmas-dark-card:  #132019;
+  --xmas-dark-border:#1e3a2a;
 }
 
-/* Assicura che Recharts abbia lo spazio necessario */
-.recharts-responsive-container {
-  min-height: 0;
-  min-width: 0;
+
+/* ─── Base ───────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Inter', sans-serif !important;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--xmas-green); border-radius: 10px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--xmas-dark-border); }
+
+/* ─── Snow animation ─────────────────────────────────────────────── */
+@keyframes snowfall {
+  0%   { transform: translateY(-20px) translateX(0)  rotate(0deg);   opacity: 0.8; }
+  50%  { transform: translateY(50vh)  translateX(30px) rotate(180deg); opacity: 0.5; }
+  100% { transform: translateY(100vh) translateX(-20px) rotate(360deg); opacity: 0; }
+}
+
+.snowflake {
+  position: fixed;
+  top: -30px;
+  pointer-events: none;
+  z-index: 0;
+  user-select: none;
+  font-size: 1.2rem;
+  animation: snowfall linear infinite;
+  opacity: 0.25;
+}
+
+/* ─── Gradient title utility ─────────────────────────────────────── */
+.xmas-gradient-text {
+  background: linear-gradient(135deg, var(--xmas-red), var(--xmas-gold), var(--xmas-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Card glow effects ──────────────────────────────────────────── */
+.xmas-card-glow {
+  box-shadow: 0 0 40px rgba(196, 30, 58, 0.08), 0 20px 60px rgba(0,0,0,0.15);
+}
+
+.dark .xmas-card-glow {
+  box-shadow: 0 0 60px rgba(196, 30, 58, 0.12), 0 25px 80px rgba(0,0,0,0.4);
+}
+
+/* ─── Button press animation ─────────────────────────────────────── */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ─── Recharts override ──────────────────────────────────────────── */
+svg text {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+.recharts-wrapper { margin: 0 auto !important; }
+.recharts-surface { overflow: visible !important; }
+
+/* ─── Print styles ───────────────────────────────────────────────── */
+@media print {
+  @page { size: landscape; }
+  nav, .no-print { display: none !important; }
+  .print-area { display: block !important; width: 100% !important; border: none !important; }
+  table { font-size: 8px !important; }
+  body { background: white !important; color: black !important; }
+}
+
+/* ─── Drag & drop feedback ───────────────────────────────────────── */
+[draggable="true"] {
+  cursor: grab;
+}
+[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* ─── Fade-in animation for tabs ─────────────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content {
+  animation: fadeSlideIn 0.2s ease-out;
+}
+
+/* ─── Input autofill override (dark mode) ────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--xmas-dark-card) inset;
+  -webkit-text-fill-color: white;
+  caret-color: white;
 }
