@@ -104,3 +104,25 @@ export const computeDishwasherSchedule = (people, availabilities) => {
   });
   return schedule;
 };
+
+export const formatFirstName = (fullName, allPeople) => {
+  const parts = fullName.split(' ');
+  const first = parts[0];
+  const sameFirstNames = allPeople.filter(p => p.split(' ')[0] === first && p !== fullName);
+  if (sameFirstNames.length === 0) return first;
+
+  const myRest = fullName.substring(first.length + 1);
+  let charsToTake = 1;
+
+  while (charsToTake <= myRest.length) {
+    const myPrefix = myRest.substring(0, charsToTake).toLowerCase();
+    const stillConflict = sameFirstNames.some(p => {
+      const otherRest = p.substring(first.length + 1);
+      return otherRest.substring(0, charsToTake).toLowerCase() === myPrefix;
+    });
+    if (!stillConflict) break;
+    charsToTake++;
+  }
+
+  return `${first} ${myRest.substring(0, charsToTake)}.`;
+};

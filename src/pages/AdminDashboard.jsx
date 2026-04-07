@@ -224,7 +224,7 @@ const AdminDashboard = ({
                   </tr>
                 </thead>
                 <tbody className={dm ? 'text-white/70' : 'text-slate-700'}>
-                  {people.map(p => (
+                  {[...people].sort((a,b)=>a.localeCompare(b,'it',{sensitivity:'base'})).map(p => (
                     <tr key={p} className={`border-t transition-colors ${dm ? 'border-[#1e3a2a] hover:bg-[#1e3a2a]' : 'border-slate-100 hover:bg-slate-50'}`}>
                       <td className={`p-2 font-bold sticky left-0 border-r ${dm ? 'bg-[#132019] border-[#1e3a2a]' : 'bg-white border-slate-100'}`}>{p}</td>
                       {ALL_PERIODS.map((per, i) => (

@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Utensils, AlertTriangle, GripVertical, RotateCcw } from 'lucide-react';
 import { DATES, DAY_SLOTS } from '../utils/constants';
-import { getInitials, computeDishwasherSchedule } from '../utils/helpers';
+import { getInitials, computeDishwasherSchedule, formatFirstName } from '../utils/helpers';
 
 const MEAL_SLOTS = ['Pranzo', 'Cena'];
 
-const PersonChip = ({ name, darkMode, draggable, onDragStart, onDragEnd, isDragging }) => (
+const PersonChip = ({ name, allPeople, darkMode, draggable, onDragStart, onDragEnd, isDragging }) => (
   <div
     draggable={draggable}
     onDragStart={onDragStart}
@@ -22,12 +22,12 @@ const PersonChip = ({ name, darkMode, draggable, onDragStart, onDragEnd, isDragg
     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#c41e3a] to-[#2d7a4e] text-white flex items-center justify-center font-black text-[10px] flex-shrink-0">
       {getInitials(name)}
     </div>
-    <span className="font-bold text-xs whitespace-nowrap">{name.split(' ')[0]}</span>
+    <span className="font-bold text-xs whitespace-nowrap">{formatFirstName(name, allPeople)}</span>
     <GripVertical size={12} className="opacity-30 flex-shrink-0" />
   </div>
 );
 
-const DropZone = ({ mealKey, assignedPeople, allPresent, darkMode, onDrop, onDragOver, onDragLeave, isOver, onRemovePerson }) => {
+const DropZone = ({ mealKey, assignedPeople, allPresent, allPeople, darkMode, onDrop, onDragOver, onDragLeave, isOver, onRemovePerson }) => {
   const unassigned = allPresent.filter(p => !assignedPeople.includes(p));
 
   return (
@@ -57,7 +57,7 @@ const DropZone = ({ mealKey, assignedPeople, allPresent, darkMode, onDrop, onDra
             <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#c41e3a] to-[#a01830] text-white flex items-center justify-center font-black text-[9px]">
               {getInitials(p)}
             </div>
-            {p.split(' ')[0]}
+            {formatFirstName(p, allPeople)}
             <button
               onClick={() => onRemovePerson(mealKey, p)}
               className="opacity-0 group-hover:opacity-100 ml-1 text-red-400 hover:text-red-600 transition-opacity"
@@ -88,6 +88,30 @@ const DishesBoard = ({ people, availabilities, dishAssignments, darkMode, onUpda
   const getMealKey = (date, slot) => `${date}|${slot}`;
 
   const getAssigned = (mealKey) => dishAssignments?.[mealKey] ?? null;
+
+  const finalScheduleMap = useMemo(() => {
+    const map = {};
+    DATES.forEach(date => {
+      MEAL_SLOTS.forEach(slot => {
+        if (!DAY_SLOTS[date].includes(slot)) return;
+        const mealKey = getMealKey(date, slot);
+        const autoEntry = autoSchedule.find(e => e.date === date && e.slot === slot);
+        map[mealKey] = dishAssignments?.[mealKey] ?? (autoEntry?.crew || []);
+      });
+    });
+    return map;
+  }, [autoSchedule, dishAssignments]);
+
+  const washCounts = useMemo(() => {
+    const counts = {};
+    people.forEach(p => counts[p] = 0);
+    Object.values(finalScheduleMap).forEach(crew => {
+      crew.forEach(p => {
+        if (counts[p] !== undefined) counts[p]++;
+      });
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'it', { sensitivity: 'base' }));
+  }, [finalScheduleMap, people]);
 
   const handleDragStart = (e, person, sourceKey) => {
     setDraggedPerson(person);
@@ -121,9 +145,10 @@ const DishesBoard = ({ people, availabilities, dishAssignments, darkMode, onUpda
   };
 
   const handleRemovePerson = (mealKey, person) => {
+    const current = finalScheduleMap[mealKey];
     const newAssignments = {
       ...dishAssignments,
-      [mealKey]: (dishAssignments?.[mealKey] || []).filter(p => p !== person),
+      [mealKey]: current.filter(p => p !== person),
     };
     onUpdateAssignments(newAssignments);
   };
@@ -149,6 +174,21 @@ const DishesBoard = ({ people, availabilities, dishAssignments, darkMode, onUpda
           Se nessuno è assegnato manualmente, viene usato il calcolo automatico (chi ha lavato meno).
           Clicca <strong>↺</strong> per tornare all'automatico su un singolo pasto.
         </span>
+      </div>
+
+      <div className={`p-4 rounded-2xl border ${card}`}>
+        <h3 className="text-xs font-black uppercase opacity-60 mb-3">Statistiche Turni Piatti</h3>
+        <div className="flex flex-wrap gap-2">
+          {washCounts.map(([name, count]) => (
+            <div key={name} className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
+              count === 0
+                ? (darkMode ? 'bg-[#1e3a2a] border-[#2a4a35] text-white/50' : 'bg-slate-50 border-slate-200 text-slate-400')
+                : (darkMode ? 'bg-[#c41e3a]/20 border-[#c41e3a]/40 text-red-300' : 'bg-red-50 border-red-200 text-red-700')
+            }`}>
+              {formatFirstName(name, people)}: <span className="font-black">{count}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {DATES.map(date => {
@@ -211,6 +251,7 @@ const DishesBoard = ({ people, availabilities, dishAssignments, darkMode, onUpda
                       mealKey={mealKey}
                       assignedPeople={displayAssigned}
                       allPresent={presentPeople}
+                      allPeople={people}
                       darkMode={darkMode}
                       isOver={isOver}
                       onDrop={handleDrop}
@@ -229,6 +270,7 @@ const DishesBoard = ({ people, availabilities, dishAssignments, darkMode, onUpda
                           <PersonChip
                             key={p}
                             name={p}
+                            allPeople={people}
                             darkMode={darkMode}
                             draggable
                             isDragging={draggedPerson === p && dragSource === 'pool' + mealKey}
