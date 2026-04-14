@@ -38,10 +38,12 @@ export const getICSDateStr = (dateLabel, slotName) => {
   return { dtstart: `${dateStr}T${timeData.start}`, dtend: `${dateStr}T${timeData.end}` };
 };
 
-export const downloadICS = (currentUser, availabilities) => {
+export const downloadICS = (currentUser, availabilities, schedule = []) => {
   let icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//TriduoTracker//IT\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\n`;
   const userSlots = availabilities[currentUser] || {};
   let eventCount = 0;
+
+  // 1. User Shifts
   Object.keys(userSlots).forEach(dateLabel => {
     const slots = userSlots[dateLabel];
     if (!slots) return;
@@ -55,6 +57,23 @@ export const downloadICS = (currentUser, availabilities) => {
       }
     });
   });
+
+  // 2. Program Events
+  if (schedule && schedule.length > 0) {
+    schedule.forEach(item => {
+      if (!item.date || item.date === 'Generale') return;
+      const dateStr = DATE_MAP[item.date];
+      if (!dateStr) return;
+      const timeClean = (item.time || '00:00').replace(':', '') + '00';
+      // Assume 1 hour duration if not specified
+      const start = `${dateStr}T${timeClean}`;
+      const end = `${dateStr}T${String(parseInt(timeClean.slice(0, 4)) + 100).padStart(4, '0')}00`;
+      
+      eventCount++;
+      icsContent += `BEGIN:VEVENT\nSUMMARY:Programma: ${item.title}\nDTSTART:${start}\nDTEND:${end}\nDESCRIPTION:${item.description || ''}\nLOCATION:Casa Alpina\nSTATUS:CONFIRMED\nEND:VEVENT\n`;
+    });
+  }
+
   icsContent += `END:VCALENDAR`;
   if (eventCount === 0) { alert('Nessun turno selezionato!'); return; }
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });

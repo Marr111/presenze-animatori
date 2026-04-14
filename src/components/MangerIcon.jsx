@@ -10,46 +10,66 @@ const MangerIcon = ({ size = 64, className = "" }) => {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* Golden Glow / Star */}
-      <circle cx="12" cy="6" r="4" fill="url(#starGlow)" opacity="0.3" />
-      <path 
-        d="M12 2L13.5 5.5H17L14.25 7.5L15.5 11L12 9L8.5 11L9.75 7.5L7 5.5H10.5L12 2Z" 
-        fill="#e8c84b"
-      />
-      
-      {/* Manger (Culla) */}
-      <path 
-        d="M4 14C4 14 5 19 12 19C19 19 20 14 20 14" 
-        stroke="#8B4513" 
-        strokeWidth="1.5" 
-        strokeLinecap="round" 
-      />
-      <path 
-        d="M6 21L8 19M18 21L16 19" 
-        stroke="#8B4513" 
-        strokeWidth="1.5" 
-        strokeLinecap="round" 
-      />
-      
-      {/* Straw/Hay */}
-      <path d="M7 15L8 14M10 16L11 14M13 16L14 14M16 15L17 14" stroke="#E8C84B" strokeWidth="0.5" />
+      {/* Radiant Background Glow */}
+      <circle cx="12" cy="14" r="8" fill="url(#haloGlow)" opacity="0.4" />
 
-      {/* Baby Jesus */}
+      {/* Star of Bethlehem */}
+      <path 
+        d="M12 2L13.2 6.5L18 7.5L13.2 8.5L12 13L10.8 8.5L6 7.5L10.8 6.5L12 2Z" 
+        fill="#e8c84b"
+      >
+        <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite" />
+      </path>
+
+      {/* Wooden Manger (Stable & Clear) */}
+      <path 
+        d="M4 14C4 14 5 19.5 12 19.5C19 19.5 20 14 20 14H4Z" 
+        fill="#5d3a1a" 
+      />
+      <path 
+        d="M6 19.5L4 22M18 19.5L20 22" 
+        stroke="#5d3a1a" 
+        strokeWidth="1.5" 
+        strokeLinecap="round" 
+      />
+
+      {/* Straw / Hay (More visible) */}
+      <g stroke="#e8c84b" strokeWidth="0.8" strokeLinecap="round" opacity="0.9">
+        <path d="M7 14L6 11.5M9 14.5L8.5 11M11 15L11 12M13 15L14 12M15 14.5L16.5 11.5M18 14L19.5 12.5" />
+      </g>
+
+      {/* Swaddled Baby Jesus (Highly Iconic) */}
       <g>
-        {/* Swaddling Clothes */}
-        <ellipse cx="12" cy="15" rx="4" ry="2.5" fill="#fef5e8" />
-        <path d="M9 15C9 15 10 16.5 12 16.5C14 16.5 15 15 15 15" stroke="#E0C9A8" strokeWidth="0.5" />
+        {/* Swaddling Clothes (White/Cream Wrap) */}
+        <path 
+          d="M8.5 15C8.5 13.5 10 12.5 12 12.5C14 12.5 15.5 13.5 15.5 15C15.5 16.5 14 17.5 12 17.5C10 17.5 8.5 16.5 8.5 15Z" 
+          fill="#FFFFFF" 
+          stroke="#f0e0d0"
+          strokeWidth="0.2"
+        />
+        <path d="M10 13.5C11 14 13 14 14 13.5M9.5 15.5C11 16.5 13 16.5 14.5 15.5" stroke="#e0d0c0" strokeWidth="0.4" opacity="0.5" />
         
-        {/* Head */}
-        <circle cx="14" cy="14.5" r="1.5" fill="#FFE4C4" />
+        {/* Face (Centered and clearer) */}
+        <circle cx="13.2" cy="14.5" r="2.2" fill="#ffd1ba" />
         
-        {/* Halo / Soft Glow */}
-        <circle cx="14" cy="14.5" r="2.5" stroke="#e8c84b" strokeWidth="0.2" opacity="0.5" />
+        {/* Sleeping Eyes (Tiny dots) */}
+        <circle cx="12.5" cy="14.5" r="0.3" fill="#5d3a1a" opacity="0.4" />
+        <circle cx="13.9" cy="14.5" r="0.3" fill="#5d3a1a" opacity="0.4" />
+        
+        {/* Iconic Halo (Golden Ring) */}
+        <circle 
+          cx="13.2" 
+          cy="14.5" 
+          r="3.5" 
+          stroke="#e8c84b" 
+          strokeWidth="0.5" 
+          strokeDasharray="1 1"
+        />
       </g>
 
       <defs>
-        <radialGradient id="starGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(12 6) rotate(90) scale(4)">
-          <stop stopColor="#e8c84b" />
+        <radialGradient id="haloGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(13.2 14.5) rotate(90) scale(7)">
+          <stop stopColor="#e8c84b" stopOpacity="0.8" />
           <stop offset="1" stopColor="#e8c84b" stopOpacity="0" />
         </radialGradient>
       </defs>

@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import IdeaBoard from '../components/IdeaBoard';
 import ProgramSection from '../components/ProgramSection';
 import MangerIcon from '../components/MangerIcon';
-import { DATES, DAY_SLOTS } from '../utils/constants';
+import { DATES, DAY_SLOTS, TIME_MAP } from '../utils/constants';
 import { calculateDebt, downloadICS } from '../utils/helpers';
 
 const TABS = [
@@ -98,7 +98,7 @@ const UserDashboard = ({
             <h2 className="text-3xl font-black uppercase tracking-tight">
               Ciao, <br />{currentUser.split(' ')[0]} 👋
             </h2>
-            <p className="opacity-70 text-xs mt-1 font-bold uppercase tracking-widest">Triduo 2026 · Casa Alpina</p>
+            <p className="opacity-70 text-xs mt-1 font-bold uppercase tracking-widest">Triduo Natalizio 2026</p>
           </div>
           <div className="text-right bg-white/10 backdrop-blur-md p-4 rounded-[1.5rem] border border-white/20 relative z-10 min-w-[120px]">
             <div className="text-[10px] font-black uppercase opacity-60 tracking-widest mb-1">Da Versare</div>
@@ -106,7 +106,7 @@ const UserDashboard = ({
           </div>
           <div className="absolute -top-8 -right-8 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
           <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-[#e8c84b]/20 rounded-full blur-2xl" />
-          <MangerIcon size={48} className="absolute top-2 right-2 opacity-30 drop-shadow-md" />
+          <MangerIcon size={84} className="absolute -top-2 -right-2 opacity-40 drop-shadow-2xl rotate-12" />
         </div>
 
         {/* Tabs */}
@@ -129,17 +129,19 @@ const UserDashboard = ({
         {/* --- TAB: TURNI --- */}
         {activeTab === 'turni' && (
           <div className="space-y-4">
-            {/* ICS download */}
-            <button
-              onClick={() => downloadICS(currentUser, availabilities)}
-              className={`w-full p-4 rounded-2xl border flex items-center gap-4 transition-all ${card}`}
-            >
-              <CalendarDays className="text-[#c41e3a]" size={28} />
-              <div className="text-left">
-                <div className="font-black uppercase text-sm">Aggiungi al Calendario</div>
-                <div className="text-[10px] opacity-50">Scarica i tuoi turni come file .ics</div>
-              </div>
-            </button>
+            {/* Header with Title and ICS button */}
+            <div className="flex items-center justify-between mb-5 px-1">
+              <h2 className={`text-xl font-black flex items-center gap-2 ${dm ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                <CalendarDays size={22} /> I Miei Turni
+              </h2>
+              <button
+                onClick={() => downloadICS(currentUser, availabilities, schedule)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#2d7a4e] text-white rounded-xl text-[10px] font-black uppercase hover:bg-[#1a5c38] transition-colors shadow-md text-center leading-tight"
+              >
+                <Check size={12} className="flex-shrink-0" />
+                <span>salva i momenti in cui ti sei segnato sul calendario</span>
+              </button>
+            </div>
 
             {DATES.map(d => {
               const allSelected = DAY_SLOTS[d].every(s => availabilities[currentUser]?.[d]?.[s] === true);
@@ -179,6 +181,9 @@ const UserDashboard = ({
                             {isMeal ? <Utensils size={14} /> : <Clock size={14} />}
                           </div>
                           <span className="text-[10px] tracking-wide">{s}</span>
+                          <span className={`text-[8px] opacity-50 font-mono mt-0.5`}>
+                            {TIME_MAP[s]?.start.slice(0,2)}:{TIME_MAP[s]?.start.slice(2,4)} - {TIME_MAP[s]?.end.slice(0,2)}:{TIME_MAP[s]?.end.slice(2,4)}
+                          </span>
                           {isMeal && !active && (
                             <span className="absolute top-1 right-1 text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">+5€</span>
                           )}
@@ -213,6 +218,8 @@ const UserDashboard = ({
               darkMode={dm}
               isAdmin={false}
               onUpdate={() => {}}
+              onDownloadICS={() => downloadICS(currentUser, availabilities, schedule)}
+              downloadText="salva i momenti in cui ti sei segnato sul calendario"
             />
           </div>
         )}

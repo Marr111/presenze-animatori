@@ -12,7 +12,7 @@ const SLOT_ICONS = {
   'Generale': '📌',
 };
 
-const ProgramSection = ({ schedule, darkMode, isAdmin, onUpdate }) => {
+const ProgramSection = ({ schedule, darkMode, isAdmin, onUpdate, onDownloadICS, downloadText = "Salva Calendario" }) => {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({});
   const [showAdd, setShowAdd] = useState(false);
@@ -67,14 +67,29 @@ const ProgramSection = ({ schedule, darkMode, isAdmin, onUpdate }) => {
         <h2 className={`text-xl font-black flex items-center gap-2 ${darkMode ? 'text-amber-300' : 'text-amber-700'}`}>
           <CalendarDays size={22} /> Programma
         </h2>
-        {isAdmin && (
+        <div className="flex gap-2">
           <button
-            onClick={() => setShowAdd(!showAdd)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#2d7a4e] text-white rounded-xl text-xs font-black uppercase hover:bg-[#1a5c38] transition-colors shadow-md"
+            onClick={() => {
+              // We need availabilities and currentUser here, but ProgramSection only gets schedule.
+              // We'll wrap this in a way that UserDashboard can pass a handler or we just notify.
+              // Actually, ProgramSection is used in AdminDashboard and UserDashboard.
+              // In UserDashboard, it's called with onUpdate={() => {}}.
+              // Let's add an onDownloadICS prop to ProgramSection.
+              if (onDownloadICS) onDownloadICS();
+            }}
+            className={`flex items-center gap-1.5 px-4 py-2 ${darkMode ? 'bg-[#1e3a2a] text-white/70 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} rounded-xl text-[10px] font-black uppercase transition-colors shadow-sm text-center leading-tight`}
           >
-            <Plus size={14} /> Aggiungi
+            <Check size={14} className="flex-shrink-0" /> {downloadText}
           </button>
-        )}
+          {isAdmin && (
+            <button
+              onClick={() => setShowAdd(!showAdd)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#2d7a4e] text-white rounded-xl text-xs font-black uppercase hover:bg-[#1a5c38] transition-colors shadow-md"
+            >
+              <Plus size={14} /> Aggiungi
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Add form */}

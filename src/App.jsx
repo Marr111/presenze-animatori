@@ -14,6 +14,7 @@ const App = () => {
     people: INITIAL_PEOPLE,
     schedule: [],
     dishAssignments: {},
+    paidUsers: [],
   });
   const [darkMode, setDarkMode] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -31,6 +32,7 @@ const App = () => {
           people:          result.people?.length > 0 ? result.people : prev.people,
           schedule:        result.schedule        || [],
           dishAssignments: result.dishAssignments || {},
+          paidUsers:       result.paidUsers       || [],
         }));
       }
     } catch { /* ignore in local dev */ }
@@ -75,6 +77,7 @@ const App = () => {
            people:          response.data.people?.length > 0 ? response.data.people : prev.people,
            schedule:        response.data.schedule        || [],
            dishAssignments: response.data.dishAssignments || {},
+           paidUsers:       response.data.paidUsers       || [],
          }));
       }
     } catch {

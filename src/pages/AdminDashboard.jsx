@@ -24,6 +24,7 @@ const TABS = [
   { key: 'dishes',    label: '🍽 Piatti' },
   { key: 'program',   label: '📋 Programma' },
   { key: 'logs',      label: '📜 Log' },
+  { key: 'payments',  label: '💰 Pagamenti' },
   { key: 'database',  label: 'Database' },
 ];
 
@@ -44,7 +45,7 @@ const AdminDashboard = ({
   const [logsLoading, setLogsLoading] = useState(false);
   const [filterUser, setFilterUser] = useState('');
 
-  const { availabilities, ideas, people, schedule, dishAssignments } = appData;
+  const { availabilities, ideas, people, schedule, dishAssignments, paidUsers } = appData;
 
   const dm = darkMode;
   const card = dm ? 'bg-[#132019] border-[#1e3a2a]' : 'bg-white border-slate-100 shadow-sm';
@@ -101,7 +102,7 @@ const AdminDashboard = ({
 
   const handleResetData = async () => {
     if (!confirm('ATTENZIONE ESTREMA:\n\nStai per cancellare TUTTI i dati.\nQuesta azione non è reversibile.\n\nSei sicuro?')) return;
-    const empty = { availabilities: {}, ideas: [], people: INITIAL_PEOPLE, schedule: [], dishAssignments: {} };
+    const empty = { availabilities: {}, ideas: [], people: INITIAL_PEOPLE, schedule: [], dishAssignments: {}, paidUsers: [] };
     await persistToCloud(empty);
     alert('Database resettato.');
     window.location.reload();
@@ -128,6 +129,14 @@ const AdminDashboard = ({
 
   const handleUpdateSchedule = async (newSchedule) => {
     await updateAndSave({ schedule: newSchedule }, 'Admin ha aggiornato il programma');
+  };
+
+  const handleTogglePayment = async (person) => {
+    const isPaid = (paidUsers || []).includes(person);
+    const newPaid = isPaid
+      ? paidUsers.filter(p => p !== person)
+      : [...(paidUsers || []), person];
+    await updateAndSave({ paidUsers: newPaid }, `Admin ha segnato ${person} come ${isPaid ? 'NON pagato' : 'PAGATO'}`);
   };
 
   const chartBox = (index, title, chartEl) => (
@@ -224,17 +233,25 @@ const AdminDashboard = ({
                   </tr>
                 </thead>
                 <tbody className={dm ? 'text-white/70' : 'text-slate-700'}>
-                  {[...people].sort((a,b)=>a.localeCompare(b,'it',{sensitivity:'base'})).map(p => (
-                    <tr key={p} className={`border-t transition-colors ${dm ? 'border-[#1e3a2a] hover:bg-[#1e3a2a]' : 'border-slate-100 hover:bg-slate-50'}`}>
-                      <td className={`p-2 font-bold sticky left-0 border-r ${dm ? 'bg-[#132019] border-[#1e3a2a]' : 'bg-white border-slate-100'}`}>{p}</td>
-                      {ALL_PERIODS.map((per, i) => (
-                        <td key={i} className={`text-center border-r p-1 ${dm ? 'border-[#1e3a2a]' : 'border-slate-100'}`}>
-                          {availabilities[p]?.[per.date]?.[per.slot] && <Check size={14} className="mx-auto text-emerald-500" />}
+                  {[...people].sort((a,b)=>a.localeCompare(b,'it',{sensitivity:'base'})).map(p => {
+                    const isPaid = (paidUsers || []).includes(p);
+                    return (
+                      <tr key={p} className={`border-t transition-colors ${dm ? 'border-[#1e3a2a] hover:bg-[#1e3a2a]' : 'border-slate-100 hover:bg-slate-50'} ${isPaid ? (dm ? 'bg-emerald-500/5' : 'bg-emerald-50/30') : ''}`}>
+                        <td className={`p-2 font-bold sticky left-0 border-r flex items-center gap-2 ${dm ? 'bg-[#132019] border-[#1e3a2a]' : 'bg-white border-slate-100'}`}>
+                          {isPaid && <Check size={12} className="text-emerald-500" />}
+                          <span className={isPaid ? 'text-emerald-500' : ''}>{p}</span>
                         </td>
-                      ))}
-                      <td className="p-2 text-center bg-amber-500/5 font-black text-amber-500">{calculateDebt(p, availabilities)}€</td>
-                    </tr>
-                  ))}
+                        {ALL_PERIODS.map((per, i) => (
+                          <td key={i} className={`text-center border-r p-1 ${dm ? 'border-[#1e3a2a]' : 'border-slate-100'}`}>
+                            {availabilities[p]?.[per.date]?.[per.slot] && <Check size={14} className="mx-auto text-emerald-500" />}
+                          </td>
+                        ))}
+                        <td className={`p-2 text-center font-black ${isPaid ? 'text-emerald-500 bg-emerald-500/10' : 'bg-amber-500/5 text-amber-500'}`}>
+                          {calculateDebt(p, availabilities)}€
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot className={`font-black uppercase text-[9px] ${dm ? 'bg-[#c41e3a]/20 text-red-300' : 'bg-[#c41e3a] text-white'}`}>
                   <tr>
@@ -281,6 +298,7 @@ const AdminDashboard = ({
               darkMode={dm}
               isAdmin={true}
               onUpdate={handleUpdateSchedule}
+              onDownloadICS={() => downloadICS('Admin', availabilities, schedule)}
             />
           </div>
         )}
@@ -329,6 +347,78 @@ const AdminDashboard = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── PAYMENTS ── */}
+        {activeTab === 'payments' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className={`p-6 rounded-[2rem] border ${card}`}>
+              <h3 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
+                <Check className="text-emerald-500" /> Registro Pagamenti
+              </h3>
+              <div className="space-y-2">
+                {[...people].sort((a,b) => a.localeCompare(b)).map(p => {
+                  const debt = calculateDebt(p, availabilities);
+                  const isPaid = (paidUsers || []).includes(p);
+                  if (debt === 0 && !isPaid) return null; // Nascondi chi non deve nulla e non ha pagato
+                  
+                  return (
+                    <div 
+                      key={p} 
+                      onClick={() => handleTogglePayment(p)}
+                      className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99] ${
+                        isPaid 
+                          ? (dm ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-green-50 border-green-200 text-green-700')
+                          : (dm ? 'bg-amber-500/5 border-amber-500/20' : 'bg-white border-slate-100 shadow-sm')
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
+                          isPaid 
+                            ? 'bg-emerald-500 text-white' 
+                            : 'bg-gradient-to-br from-slate-400 to-slate-500 text-white'
+                        }`}>
+                          {isPaid ? <Check size={20} /> : getInitials(p)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm">{p}</p>
+                          <p className="text-[10px] uppercase font-black opacity-50 tracking-wider">
+                            Quota: {debt}€
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {isPaid && <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500/20 px-2 py-1 rounded-lg">Pagato ✓</span>}
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                          isPaid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'
+                        }`}>
+                          {isPaid && <Check size={14} />}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className={`p-6 rounded-3xl border flex items-center justify-between ${card}`}>
+              <div className="flex items-center gap-3 text-emerald-500">
+                <BarChart2 size={24} />
+                <div>
+                  <p className="text-[10px] uppercase font-black opacity-50">Totale Incassato</p>
+                  <p className="text-2xl font-black">
+                    {people.filter(p => (paidUsers || []).includes(p)).reduce((a, p) => a + calculateDebt(p, availabilities), 0)}€
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase font-black opacity-50">Ancora da Incassare</p>
+                <p className="text-2xl font-black text-[#c41e3a]">
+                  {people.filter(p => !(paidUsers || []).includes(p)).reduce((a, p) => a + calculateDebt(p, availabilities), 0)}€
+                </p>
+              </div>
             </div>
           </div>
         )}
