@@ -21,6 +21,11 @@ export default async function handler(req, res) {
       if (type === 'UPDATE_USER_AVAIL') {
         if (!currentState.availabilities) currentState.availabilities = {};
         currentState.availabilities[payload.user] = payload.avail;
+        // Aggiunge il nuovo utente alla lista people se non è già presente
+        if (!currentState.people) currentState.people = [];
+        if (!currentState.people.includes(payload.user)) {
+          currentState.people.push(payload.user);
+        }
       } 
       else if (type === 'ADD_IDEA') {
         if (!currentState.ideas) currentState.ideas = [];
