@@ -228,8 +228,12 @@ function doPost(e) {
 
 // ============================================================
 // onEdit — Sync Foglio → Sito (trigger installabile)
-// Quando qualcuno modifica i nomi nella colonna A del foglio,
-// invia la lista aggiornata al sito Vercel.
+// Reagisce a qualsiasi modifica nel foglio "Presenze":
+//   - Colonna A (nomi): aggiorna la lista persone
+//   - Qualsiasi colonna: legge l'intera griglia e manda
+//     le disponibilità aggiornate al sito Vercel.
+// IMPORTANTE: deve essere un trigger INSTALLABILE (non semplice)
+// perché usa UrlFetchApp e PropertiesService.
 // ============================================================
 function onEdit(e) {
     // Anti-loop: se l'ultima scrittura programmatica è stata
@@ -243,36 +247,61 @@ function onEdit(e) {
     var editedSheet = e.range.getSheet();
     if (editedSheet.getName() !== "Presenze") return;
 
-    // Reagisci solo a modifiche nella colonna A (nomi)
-    if (e.range.getColumn() !== 1) return;
-
     // Ignora modifiche nelle prime 2 righe (intestazioni)
     if (e.range.getRow() <= 2) return;
 
-    // Leggi tutti i nomi attuali dalla colonna A (a partire dalla riga 3)
-    var sheet = e.source.getSheetByName("Presenze");
-    var data = sheet.getDataRange().getValues();
-    var names = [];
-    for (var i = 2; i < data.length; i++) {
-        var name = (data[i][0] || "").toString().trim();
-        if (name &&
-            !name.toLowerCase().includes("prezzo a pasto") &&
-            !name.toLowerCase().includes("totali")) {
-            names.push(name);
+    // --- Costruisci la mappa inversa: numero colonna (0-based) → {date, slot} ---
+    var reverseMap = {}; // colIndex -> { date, slot }
+    for (var date in COL_MAP) {
+        for (var slot in COL_MAP[date]) {
+            reverseMap[COL_MAP[date][slot]] = { date: date, slot: slot };
         }
     }
 
-    // Invia la lista aggiornata al sito Vercel
+    // --- Leggi l'intera griglia dal foglio ---
+    var sheet = e.source.getSheetByName("Presenze");
+    var data = sheet.getDataRange().getValues();
+
+    var names = [];
+    var availabilities = {};
+
+    for (var i = 2; i < data.length; i++) {
+        var name = (data[i][0] || "").toString().trim();
+        if (!name ||
+            name.toLowerCase().includes("prezzo a pasto") ||
+            name.toLowerCase().includes("totali")) {
+            continue;
+        }
+        names.push(name);
+        availabilities[name] = {};
+
+        // Leggi le X per ogni colonna mappata
+        for (var colIndex in reverseMap) {
+            var cell = (data[i][parseInt(colIndex)] || "").toString().trim().toLowerCase();
+            var isChecked = (cell === "x" || cell === "✓" || cell === "true" || cell === "1");
+            if (isChecked) {
+                var info = reverseMap[colIndex];
+                if (!availabilities[name][info.date]) {
+                    availabilities[name][info.date] = {};
+                }
+                availabilities[name][info.date][info.slot] = true;
+            }
+        }
+    }
+
+    // Invia la lista aggiornata + disponibilità al sito Vercel
     try {
-        UrlFetchApp.fetch(VERCEL_URL + "/api/sync-from-sheet", {
+        var response = UrlFetchApp.fetch(VERCEL_URL + "/api/sync-from-sheet", {
             method: "post",
             contentType: "application/json",
             payload: JSON.stringify({
                 secret: SYNC_SECRET,
-                people: names
+                people: names,
+                availabilities: availabilities
             }),
             muteHttpExceptions: true
         });
+        Logger.log("Sync to Vercel: " + response.getContentText());
     } catch (err) {
         Logger.log("Sync to Vercel failed: " + err.message);
     }

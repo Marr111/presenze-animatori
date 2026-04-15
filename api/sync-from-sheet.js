@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { secret, people } = req.body;
+  const { secret, people, availabilities } = req.body;
 
   // Verify shared secret
   if (!process.env.SYNC_SECRET || secret !== process.env.SYNC_SECRET) {
@@ -29,6 +29,16 @@ export default async function handler(req, res) {
 
     // Update the people list (sorted)
     currentState.people = [...people].sort();
+
+    // If the sheet also sent availabilities (full sync), merge them in.
+    // Sheet data wins for people present in the sheet; Redis data is kept for
+    // anyone the sheet didn't mention (e.g. people with no rows yet).
+    if (availabilities && typeof availabilities === 'object') {
+      currentState.availabilities = {
+        ...currentState.availabilities,   // keep existing data
+        ...availabilities,                // overwrite with sheet data
+      };
+    }
 
     // Save back to Redis
     await saveToRedis(currentState);
