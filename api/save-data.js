@@ -4,7 +4,7 @@ import { loadFromRedis, saveToRedis } from './_lib/redis.js';
 // Helper: sync a Sheets è best-effort, non deve bloccare il salvataggio su Redis
 const trySaveToSheets = async (data) => {
   try {
-    await saveToSheets(data);
+    await savueToSheets(data);
   } catch (e) {
     console.warn('Sheet sync failed (non-blocking):', e.message);
   }
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     if (actionObj) {
       const { type, payload } = actionObj;
-      
+
       if (type === 'UPDATE_USER_AVAIL') {
         if (!currentState.availabilities) currentState.availabilities = {};
         currentState.availabilities[payload.user] = payload.avail;
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
         if (!currentState.people.includes(payload.user)) {
           currentState.people.push(payload.user);
         }
-      } 
+      }
       else if (type === 'ADD_IDEA') {
         if (!currentState.ideas) currentState.ideas = [];
         currentState.ideas.push(payload.idea);
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
       // Salva: Redis è critico, Sheets è best-effort
       await saveToRedis(currentState);
       trySaveToSheets(currentState); // fire-and-forget
-      
+
       return res.status(200).json({ success: true, data: currentState });
     }
 
