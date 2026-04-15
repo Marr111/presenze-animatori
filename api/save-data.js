@@ -4,7 +4,7 @@ import { loadFromRedis, saveToRedis } from './_lib/redis.js';
 // Helper: sync a Sheets è best-effort, non deve bloccare il salvataggio su Redis
 const trySaveToSheets = async (data) => {
   try {
-    await savueToSheets(data);
+    await saveToSheets(data);
   } catch (e) {
     console.warn('Sheet sync failed (non-blocking):', e.message);
   }

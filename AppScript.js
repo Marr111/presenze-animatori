@@ -12,6 +12,14 @@ var SPREADSHEET_ID = "1ekTnim4mHdvqKjrvnTxits1B1-VzwB4QMgE_lF3mNys";
 var VERCEL_URL = "https://presenze-animatori.vercel.app";
 var SYNC_SECRET = "trd26_sync_Kx7mP9qR";
 
+// Mappa delle colonne per le presenze
+// La colonna 1 è il Nome, quindi la prima presenza inizia dalla colonna 2
+var COL_MAP = {
+  "Gio 2 Apr": { "Cena": 1, "Sera": 2, "Notte": 3 },
+  "Ven 3 Apr": { "Mattino": 4, "Pranzo": 5, "Pomeriggio": 6, "Cena": 7, "Sera": 8, "Notte": 9 },
+  "Sab 4 Apr": { "Mattino": 10, "Pranzo": 11, "Pomeriggio": 12, "Cena": 13 }
+};
+
 // ============================================================
 // saveData — Scrive i dati dal sito al foglio Google
 // Supporta l'array `people` per aggiungere/rimuovere righe
