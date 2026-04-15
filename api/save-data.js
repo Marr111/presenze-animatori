@@ -1,6 +1,15 @@
 import { loadFromSheets, saveToSheets } from './_lib/sheets.js';
 import { loadFromRedis, saveToRedis } from './_lib/redis.js';
 
+// Helper: sync a Sheets è best-effort, non deve bloccare il salvataggio su Redis
+const trySaveToSheets = async (data) => {
+  try {
+    await saveToSheets(data);
+  } catch (e) {
+    console.warn('Sheet sync failed (non-blocking):', e.message);
+  }
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -10,7 +19,12 @@ export default async function handler(req, res) {
     // Prova a caricare da Redis (più veloce), altrimenti Sheets
     let currentState = await loadFromRedis();
     if (!currentState) {
-      currentState = await loadFromSheets();
+      try {
+        currentState = await loadFromSheets();
+      } catch (e) {
+        console.warn('Sheets load fallback failed:', e.message);
+        currentState = { availabilities: {}, ideas: [], people: [] };
+      }
     }
 
     const { data, actionObj } = req.body;
@@ -40,20 +54,16 @@ export default async function handler(req, res) {
         currentState.ideas = currentState.ideas.map(i => i.id === payload.idea.id ? payload.idea : i);
       }
 
-      // Salva in entrambi
-      await Promise.all([
-        saveToRedis(currentState),
-        saveToSheets(currentState)
-      ]);
+      // Salva: Redis è critico, Sheets è best-effort
+      await saveToRedis(currentState);
+      trySaveToSheets(currentState); // fire-and-forget
       
       return res.status(200).json({ success: true, data: currentState });
     }
 
     if (data) {
-      await Promise.all([
-        saveToRedis(data),
-        saveToSheets(data)
-      ]);
+      await saveToRedis(data);
+      trySaveToSheets(data); // fire-and-forget
       currentState = data;
     }
 
