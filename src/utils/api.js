@@ -1,5 +1,5 @@
 export const loadData = async () => {
-  const response = await fetch('/api/get-data');
+  const response = await fetch('/api/get-data', { cache: 'no-store' });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 };

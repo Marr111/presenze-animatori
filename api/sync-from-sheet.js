@@ -16,6 +16,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid people array' });
   }
 
+  console.log('--- EVENTO SYNC DA GOOGLE SHEETS ---');
+  console.log('Persone ricevute:', people.length);
+  console.log('Struttura availabilities ricevuta:', JSON.stringify(availabilities).substring(0, 300) + '...');
+
   try {
     // Get current state from Redis (or empty default)
     const currentState = (await loadFromRedis()) || { availabilities: {}, ideas: [], people: [] };
