@@ -316,73 +316,93 @@ function doPost(e) {
 // perché usa UrlFetchApp e PropertiesService.
 // ============================================================
 function onEdit(e) {
-    // Anti-loop: se l'ultima scrittura programmatica è stata
-    // meno di 15 secondi fa, ignora (evita ping-pong infinito)
-    var lastSync = PropertiesService.getScriptProperties().getProperty('_syncing');
-    if (lastSync && (new Date().getTime() - parseInt(lastSync)) < 15000) {
-        return;
-    }
-
-    // Reagisci solo a modifiche nel foglio "Presenze"
-    var editedSheet = e.range.getSheet();
-    if (editedSheet.getName() !== "Presenze") return;
-
-    // Ignora modifiche nelle prime 2 righe (intestazioni)
-    if (e.range.getRow() <= 2) return;
-
-    // --- Costruisci la mappa inversa: numero colonna (0-based) → {date, slot} ---
-    var reverseMap = {}; // colIndex -> { date, slot }
-    for (var date in COL_MAP) {
-        for (var slot in COL_MAP[date]) {
-            reverseMap[COL_MAP[date][slot]] = { date: date, slot: slot };
+    try {
+        // Anti-loop: se l'ultima scrittura programmatica è stata
+        // meno di 15 secondi fa, ignora (evita ping-pong infinito)
+        var lastSync = PropertiesService.getScriptProperties().getProperty('_syncing');
+        if (lastSync && (new Date().getTime() - parseInt(lastSync)) < 15000) {
+            return;
         }
-    }
 
-    // --- Leggi l'intera griglia dal foglio ---
-    var sheet = e.source.getSheetByName("Presenze");
-    var data = sheet.getDataRange().getValues();
+        // Reagisci solo a modifiche nel foglio "Presenze"
+        var editedSheet = e.range.getSheet();
+        if (editedSheet.getName() !== "Presenze") return;
 
-    var names = [];
-    var availabilities = {};
+        // Ignora modifiche nelle prime 2 righe (intestazioni)
+        if (e.range.getRow() <= 2) return;
 
-    for (var i = 2; i < data.length; i++) {
-        var name = (data[i][0] || "").toString().trim();
-        if (!name ||
-            name.toLowerCase().includes("prezzo a pasto") ||
-            name.toLowerCase().includes("totali")) {
-            continue;
-        }
-        names.push(name);
-        availabilities[name] = {};
-
-        // Leggi le X per ogni colonna mappata
-        for (var colIndex in reverseMap) {
-            var cell = (data[i][parseInt(colIndex)] || "").toString().trim().toLowerCase();
-            var isChecked = (cell === "x" || cell === "✓" || cell === "true" || cell === "1");
-            if (isChecked) {
-                var info = reverseMap[colIndex];
-                if (!availabilities[name][info.date]) {
-                    availabilities[name][info.date] = {};
-                }
-                availabilities[name][info.date][info.slot] = true;
+        // --- Costruisci la mappa inversa: numero colonna (0-based) → {date, slot} ---
+        var reverseMap = {}; // colIndex -> { date, slot }
+        for (var date in COL_MAP) {
+            for (var slot in COL_MAP[date]) {
+                reverseMap[COL_MAP[date][slot]] = { date: date, slot: slot };
             }
         }
-    }
 
-    // Invia la lista aggiornata + disponibilità al sito Vercel
-    try {
-        var response = UrlFetchApp.fetch(VERCEL_URL + "/api/sync-from-sheet", {
-            method: "post",
-            contentType: "application/json",
-            payload: JSON.stringify({
+        // --- Leggi l'intera griglia dal foglio ---
+        var sheet = e.source.getSheetByName("Presenze");
+        var data = sheet.getDataRange().getValues();
+
+        var names = [];
+        var availabilities = {};
+
+        for (var i = 2; i < data.length; i++) {
+            var name = (data[i][0] || "").toString().trim();
+            if (!name ||
+                name.toLowerCase().includes("prezzo a pasto") ||
+                name.toLowerCase().includes("totali")) {
+                continue;
+            }
+            names.push(name);
+            availabilities[name] = {};
+
+            // Leggi le X per ogni colonna mappata
+            for (var colIndex in reverseMap) {
+                var cell = (data[i][parseInt(colIndex)] || "").toString().trim().toLowerCase();
+                var isChecked = (cell === "x" || cell === "✓" || cell === "true" || cell === "1");
+                if (isChecked) {
+                    var info = reverseMap[colIndex];
+                    if (!availabilities[name][info.date]) {
+                        availabilities[name][info.date] = {};
+                    }
+                    availabilities[name][info.date][info.slot] = true;
+                }
+            }
+        }
+
+        // Invia la lista aggiornata + disponibilità al sito Vercel
+        try {
+            e.source.toast("Invio dati a Vercel in corso...", "Sincronizzazione");
+            
+            var payload = {
                 secret: SYNC_SECRET,
                 people: names,
                 availabilities: availabilities
-            }),
-            muteHttpExceptions: true
-        });
-        Logger.log("Sync to Vercel: " + response.getContentText());
-    } catch (err) {
-        Logger.log("Sync to Vercel failed: " + err.message);
+            };
+            
+            var response = UrlFetchApp.fetch(VERCEL_URL + "/api/sync-from-sheet", {
+                method: "post",
+                contentType: "application/json",
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
+            });
+            
+            Logger.log("Sync to Vercel: " + response.getContentText());
+            var code = response.getResponseCode();
+            
+            if (code >= 200 && code < 300) {
+                e.source.toast("✅ Sincronizzazione sito completata (" + code + ")", "Successo", 3);
+            } else {
+                e.source.toast("⚠️ Vercel ha risposto con Errore " + code + ": " + response.getContentText(), "Avviso Vercel", -1);
+            }
+            
+        } catch (err) {
+            Logger.log("Sync to Vercel failed: " + err.message);
+            e.source.toast("🔴 Errore fetch verso Vercel: " + err.message, "Errore di Rete", -1);
+        }
+    } catch (globalErr) {
+        if (e && e.source) {
+            e.source.toast("🔴 ERRORE CRITICO script onEdit: " + globalErr.message, "Errore Script", -1);
+        }
     }
 }
