@@ -56,14 +56,14 @@ export default async function handler(req, res) {
 
       // Salva: Redis è critico, Sheets è best-effort
       await saveToRedis(currentState);
-      trySaveToSheets(currentState); // fire-and-forget
+      await trySaveToSheets(currentState); // await added so lambda doesn't terminate early
 
       return res.status(200).json({ success: true, data: currentState });
     }
 
     if (data) {
       await saveToRedis(data);
-      trySaveToSheets(data); // fire-and-forget
+      await trySaveToSheets(data); // await added so lambda doesn't terminate early
       currentState = data;
     }
 

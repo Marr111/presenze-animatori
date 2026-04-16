@@ -20,11 +20,15 @@ export const saveToSheets = async (data) => {
     throw new Error('Manca la variabile d\'ambiente APPS_SCRIPT_URL');
   }
 
-  // Codifica i dati come parametro URL (GET) per evitare il blocco CORS/auth di Google sulle POST
-  const encoded = encodeURIComponent(JSON.stringify(data));
-  const url = `${APPS_SCRIPT_URL}?action=save&payload=${encoded}`;
+  // Passiamo a POST per evitare i limiti di lunghezza dell'URL (GET)
+  const url = `${APPS_SCRIPT_URL}`;
   
-  const response = await fetch(url, { redirect: 'follow' });
+  const response = await fetch(url, { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'save', payload: data }),
+    redirect: 'follow' 
+  });
   const text = await response.text();
   try {
     return JSON.parse(text);

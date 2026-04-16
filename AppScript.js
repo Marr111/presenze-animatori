@@ -155,6 +155,86 @@ function testNuovoUtente() {
 }
 
 // ============================================================
+// loadData — Legge i dati dal foglio per il sito
+// ============================================================
+function loadData(ss) {
+    var mainSheet = ss.getSheetByName("Presenze") || ss.getSheets()[0];
+    var data = mainSheet.getDataRange().getValues();
+    
+    var availabilities = {};
+    var people = [];
+    var schedule = []; 
+    var ideas = []; 
+    var paidUsers = []; 
+
+    // Costruisci mappa inversa
+    var reverseMap = {};
+    for (var date in COL_MAP) {
+        for (var slot in COL_MAP[date]) {
+            reverseMap[COL_MAP[date][slot]] = { date: date, slot: slot };
+        }
+    }
+
+    // Estrai persone e disponibilità
+    for (var i = 2; i < data.length; i++) {
+        var name = (data[i][0] || "").toString().trim();
+        if (!name || 
+            name.toLowerCase().includes("prezzo a pasto") || 
+            name.toLowerCase().includes("totali")) continue;
+            
+        people.push(name);
+        availabilities[name] = {};
+        
+        for (var colIndex in reverseMap) {
+            var cell = (data[i][parseInt(colIndex)] || "").toString().trim().toLowerCase();
+            if (cell === "x" || cell === "✓" || cell === "true" || cell === "1") {
+                var info = reverseMap[colIndex];
+                if (!availabilities[name][info.date]) availabilities[name][info.date] = {};
+                availabilities[name][info.date][info.slot] = true;
+            }
+        }
+    }
+
+    // Carica altre liste se esistono
+    var ideasSheet = ss.getSheetByName("Idee");
+    if (ideasSheet) {
+        var ideasData = ideasSheet.getDataRange().getValues();
+        for (var i = 1; i < ideasData.length; i++) {
+            if (ideasData[i][0]) ideas.push({ id: ideasData[i][0], text: ideasData[i][1] });
+        }
+    }
+
+    var scheduleSheet = ss.getSheetByName("Programma");
+    if (scheduleSheet) {
+        var schedData = scheduleSheet.getDataRange().getValues();
+        for (var i = 1; i < schedData.length; i++) {
+            if (schedData[i][0]) {
+                schedule.push({
+                    id: schedData[i][0], date: schedData[i][1], time: schedData[i][2],
+                    title: schedData[i][3], description: schedData[i][4], icon: schedData[i][5]
+                });
+            }
+        }
+    }
+
+    var paidSheet = ss.getSheetByName("Pagamenti");
+    if (paidSheet) {
+        var paidData = paidSheet.getDataRange().getValues();
+        for (var i = 1; i < paidData.length; i++) {
+            if (paidData[i][0]) paidUsers.push(paidData[i][0].toString().trim());
+        }
+    }
+
+    return {
+        availabilities: availabilities,
+        people: people,
+        ideas: ideas,
+        schedule: schedule,
+        paidUsers: paidUsers
+    };
+}
+
+// ============================================================
 // doGet — Gestisce richieste GET (load/save via URL params)
 // Il sito Vercel usa GET per salvare (evita blocchi CORS/auth
 // che Google applica alle POST verso Apps Script web app)
