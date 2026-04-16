@@ -21,8 +21,6 @@ export const TIME_MAP = {
   'Notte':      { start: '000000', end: '080000' }
 };
 export const INITIAL_PEOPLE = [
-  'Matteo Casetta', 'Laura Casetta', 'Arianna Aloi', 'Beatrice Aloi',
-  'Lorenzo Trucco 04', 'Lorenzo Trucco 08', 'Simone Cavaglià', 'Simone Casetta',
-  'Gloria Romano', 'Vittoria Pelassa'
+  'Beatrice Aloi','Simone Casetta',
 ].sort((a, b) => a.localeCompare(b, 'it', { sensitivity: 'base' }));
 export const ALL_PERIODS = DATES.flatMap(d => DAY_SLOTS[d].map(s => ({ date: d, slot: s })));
