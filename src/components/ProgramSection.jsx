@@ -63,11 +63,11 @@ const ProgramSection = ({ schedule, darkMode, isAdmin, onUpdate, onDownloadICS, 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <h2 className={`text-xl font-black flex items-center gap-2 ${darkMode ? 'text-amber-300' : 'text-amber-700'}`}>
           <CalendarDays size={22} /> Programma
         </h2>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={() => {
               // We need availabilities and currentUser here, but ProgramSection only gets schedule.
@@ -77,14 +77,14 @@ const ProgramSection = ({ schedule, darkMode, isAdmin, onUpdate, onDownloadICS, 
               // Let's add an onDownloadICS prop to ProgramSection.
               if (onDownloadICS) onDownloadICS();
             }}
-            className={`flex items-center gap-1.5 px-4 py-2 ${darkMode ? 'bg-[#1e3a2a] text-white/70 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} rounded-xl text-[10px] font-black uppercase transition-colors shadow-sm text-center leading-tight`}
+            className={`flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2 ${darkMode ? 'bg-[#1e3a2a] text-white/70 hover:text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'} rounded-xl text-[10px] font-black uppercase transition-colors shadow-sm text-center leading-tight w-full sm:w-auto`}
           >
             <Check size={14} className="flex-shrink-0" /> {downloadText}
           </button>
           {isAdmin && (
             <button
               onClick={() => setShowAdd(!showAdd)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#2d7a4e] text-white rounded-xl text-xs font-black uppercase hover:bg-[#1a5c38] transition-colors shadow-md"
+              className="flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2 bg-[#2d7a4e] text-white rounded-xl text-xs font-black uppercase hover:bg-[#1a5c38] transition-colors shadow-md w-full sm:w-auto"
             >
               <Plus size={14} /> Aggiungi
             </button>

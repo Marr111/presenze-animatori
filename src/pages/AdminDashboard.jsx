@@ -403,17 +403,17 @@ const AdminDashboard = ({
               </div>
             </div>
             
-            <div className={`p-6 rounded-3xl border flex items-center justify-between ${card}`}>
+            <div className={`p-6 rounded-3xl border flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4 ${card}`}>
               <div className="flex items-center gap-3 text-emerald-500">
                 <BarChart2 size={24} />
-                <div>
+                <div className="text-center sm:text-left">
                   <p className="text-[10px] uppercase font-black opacity-50">Totale Incassato</p>
                   <p className="text-2xl font-black">
                     {people.filter(p => (paidUsers || []).includes(p)).reduce((a, p) => a + calculateDebt(p, availabilities), 0)}€
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-center sm:text-right">
                 <p className="text-[10px] uppercase font-black opacity-50">Ancora da Incassare</p>
                 <p className="text-2xl font-black text-[#c41e3a]">
                   {people.filter(p => !(paidUsers || []).includes(p)).reduce((a, p) => a + calculateDebt(p, availabilities), 0)}€

@@ -63,7 +63,9 @@ function saveData(ss, fullData) {
             for (var i = freshData.length - 1; i >= 2; i--) {
                 var rowName = (freshData[i][0] || "").toString().trim();
                 if (namesToRemove.indexOf(rowName) !== -1) {
-                    mainSheet.deleteRow(i + 1);
+                    // Invece di cancellare l'intera riga (che rompe colonna O),
+                    // spostiamo in su solo le colonne A-N (14 colonne)
+                    mainSheet.getRange(i + 1, 1, 1, 14).deleteCells(SpreadsheetApp.Dimension.ROWS);
                 }
             }
             // Ricarica i dati dopo le rimozioni
@@ -94,20 +96,30 @@ function saveData(ss, fullData) {
 
     // Se ci sono nuovi utenti, inserisci le nuove righe
     if (newNames.length > 0) {
-        if (prezzoIndex !== -1) {
-            // Inserisce nuove righe vuote esattamente PRIMA della riga "Prezzo a pasto"
-            mainSheet.insertRowsBefore(prezzoIndex, newNames.length);
-            // Scrive i nuovi nomi nelle righe appena create
-            for (var k = 0; k < newNames.length; k++) {
-                mainSheet.getRange(prezzoIndex + k, 1).setValue(newNames[k]);
-            }
-        } else {
-            // Se non trova "Prezzo a pasto", li aggiunge semplicemente in fondo
-            var lastRow = mainSheet.getLastRow();
-            for (var k = 0; k < newNames.length; k++) {
-                mainSheet.getRange(lastRow + 1 + k, 1).setValue(newNames[k]);
+        // Trova l'ultima riga valorizzata guardando SOLO la colonna A (nomi), ignorando le formule di O
+        var maxDataRow = mainSheet.getLastRow();
+        if (maxDataRow < 1) maxDataRow = 1;
+        var colA = mainSheet.getRange(1, 1, maxDataRow, 1).getValues();
+        var lastRowA = 5; // Partiamo almeno da sotto le intestazioni
+        
+        for (var r = colA.length - 1; r >= 0; r--) {
+            if (colA[r][0].toString().trim() !== "") {
+                lastRowA = r + 1;
+                break;
             }
         }
+
+        for (var k = 0; k < newNames.length; k++) {
+            var targetRow = lastRowA + 1 + k;
+            
+            // 1. Inserisce il Nome in colonna A (non fa insertCells, usa le righe già esistenti dove ci sono formule o ne crea di virtuali)
+            mainSheet.getRange(targetRow, 1).setValue(newNames[k]);
+            
+            // 2. Aggiunge la Formula indicata in colonna O
+            var formula = "=PRODOTTO(CONTA.VALORI(B" + targetRow + ";F" + targetRow + ";H" + targetRow + ";L" + targetRow + ";N" + targetRow + ");5)";
+            mainSheet.getRange(targetRow, 15).setFormula(formula);
+        }
+        
         // Ricarichiamo i dati del foglio dopo aver aggiunto le righe
         data = mainSheet.getDataRange().getValues();
     }
